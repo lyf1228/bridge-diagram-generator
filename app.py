@@ -795,7 +795,7 @@ with preview_col:
                 png = render_png(data)
                 st.session_state["png"] = png
                 st.session_state["png_name"] = (
-                    f"Bridge_Diagram_Autumn_{datetime.now():%Y%m%d_%H%M%S}.png"
+                    f"Bridge_Diagram_{datetime.now():%Y%m%d_%H%M%S}.png"
                 )
             except Exception as exc:  # noqa: BLE001
                 st.error(f"匯出失敗：{exc}")
