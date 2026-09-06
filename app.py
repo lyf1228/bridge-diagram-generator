@@ -274,7 +274,6 @@ def build_diagram_html(data: dict, *, scale: float = 1.0, for_export: bool = Fal
         '<header class="hdr">'
         f'  <span class="hdr-leaf l">{maple_svg(p["crimson"], 0.95)}</span>'
         f'  <div class="hdr-mid">'
-        f'    <div class="kicker">🍁 AUTUMN MAPLE 🍁</div>'
         f'    <h1>{data["title"] or "橋牌牌局"}</h1>'
         f'    <div class="subtitle">{subtitle}</div>'
         f'  </div>'
@@ -285,7 +284,7 @@ def build_diagram_html(data: dict, *, scale: float = 1.0, for_export: bool = Fal
     footer = (
         '<footer class="ftr">'
         f'  {wind_divider(p["amber"])}'
-        f'  <span>Bridge Diagram Generator · Autumn Maple Edition</span>'
+        f'  <span>金牌橋藝教室</span>'
         '</footer>'
     )
 
@@ -344,11 +343,9 @@ body.export {{ background:{p['outer']}; }}
 .hdr-leaf.l {{ transform:rotate(-18deg); }}
 .hdr-leaf.r {{ transform:rotate(16deg) scaleX(-1); }}
 .hdr-mid {{ text-align:center; }}
-.kicker {{ font-size:{11*s}px; letter-spacing:{3*s}px; color:{p['ember']};
-  font-weight:700; }}
 .hdr h1 {{
   font-size:{26*s}px; line-height:1.15; color:{p['crimson_deep']};
-  font-weight:800; letter-spacing:{1*s}px; margin:{3*s}px 0 {4*s}px;
+  font-weight:800; letter-spacing:{1*s}px; margin:{2*s}px 0 {4*s}px;
   text-shadow:0 {1*s}px 0 rgba(255,255,255,.6);
 }}
 .subtitle {{ font-size:{11.5*s}px; color:{p['header_ink']}; letter-spacing:{.5*s}px; }}
@@ -500,8 +497,7 @@ td.nm {{ letter-spacing:{.5*s}px; }}
 
 /* ---------- 頁尾 ---------- */
 .ftr {{ text-align:center; padding-top:{4*s}px; }}
-.ftr span {{ font-size:{8.5*s}px; letter-spacing:{2*s}px; color:{p['amber']};
-  text-transform:uppercase; }}
+.ftr span {{ font-size:{9.5*s}px; letter-spacing:{4*s}px; color:{p['amber']}; }}
 """
 
 
