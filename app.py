@@ -789,7 +789,7 @@ with preview_col:
 
     st.markdown("#### 匯出")
     st.caption("寬 540px、300DPI 級（3×）高解析度照片，自動裁切留白。")
-    if st.button("📸 匯出楓葉精裝版牌圖 (PNG)", use_container_width=True):
+    if st.button("📸 匯出牌局叫牌圖", use_container_width=True):
         with st.spinner("正在以楓葉油墨印製…"):
             try:
                 png = render_png(data)
