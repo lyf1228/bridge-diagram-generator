@@ -508,6 +508,24 @@ td.nm {{ letter-spacing:{.5*s}px; }}
 # ---------------------------------------------------------------------------
 # PNG 匯出
 # ---------------------------------------------------------------------------
+def _find_chromium() -> str | None:
+    """在 Linux（Streamlit Cloud）與 macOS 上尋找可用的 Chromium / Chrome 執行檔。"""
+    import shutil
+
+    candidates = [
+        "chromium", "chromium-browser", "chrome", "google-chrome",
+        "google-chrome-stable",
+        "/usr/bin/chromium", "/usr/bin/chromium-browser",
+        "/usr/bin/google-chrome",
+        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+    ]
+    for c in candidates:
+        found = shutil.which(c) if "/" not in c else (c if Path(c).exists() else None)
+        if found:
+            return found
+    return None
+
+
 def render_png(data: dict) -> bytes:
     """以 html2image 產生寬 540px、300DPI 級（3x）高解析度 PNG，並自動裁切留白。"""
     from html2image import Html2Image
@@ -516,18 +534,23 @@ def render_png(data: dict) -> bytes:
     export_scale = 3  # 540 * 3 = 1620px 寬 ≈ 300DPI
     html = build_diagram_html(data, scale=export_scale, for_export=True)
 
+    chromium = _find_chromium()
     with tempfile.TemporaryDirectory() as tmp:
-        hti = Html2Image(
+        opts = dict(
             output_path=tmp,
             custom_flags=[
                 "--no-sandbox",
                 "--headless=new",
                 "--hide-scrollbars",
                 "--disable-gpu",
+                "--disable-dev-shm-usage",
                 "--default-background-color=EFE6D8",
                 "--force-device-scale-factor=1",
             ],
         )
+        if chromium:
+            opts["browser_executable"] = chromium
+        hti = Html2Image(**opts)
         out_name = "diagram.png"
         # 給足高度，之後用 Pillow 依內容裁切
         hti.screenshot(
