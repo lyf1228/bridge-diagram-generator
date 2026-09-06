@@ -682,56 +682,6 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-with st.expander("📖 輸入說明 · 快速對照鍵（第一次使用請先看）", expanded=True):
-    gc1, gc2 = st.columns(2)
-    with gc1:
-        st.markdown(
-            """
-**② 四家手牌（中間區）**
-
-| 想輸入 | 就打 |
-| --- | --- |
-| A K Q 少張 | `AKQ` 或 `A K Q` |
-| 帶 10 的張 | `AT9` 或 `A 10 9`（自動轉 `T`） |
-| **缺門（該花色沒牌）** | `--` |
-
-- 大小寫都可以，空格可有可無。
-- 系統自動由大到小排序，四門張數請自行湊滿 13 張。
-"""
-        )
-    with gc2:
-        st.markdown(
-            """
-**③ 叫牌序列（左側邊欄）**
-
-| 代碼 | 意義 |
-| --- | --- |
-| `1NT` `4H` `3D` … | 一般叫品（大寫花色 S/H/D/C） |
-| `P` | Pass（過叫） |
-| `X` | Double（賭倍） |
-| `XX` | Redouble（再賭倍） |
-
-- **每行 = 一輪**，四家用空白分隔。
-- 先在「**開叫席位**」選第一個叫牌的人，系統會自動對齊欄位。
-"""
-        )
-    st.markdown(
-        """
-**範例**：北家發牌、南北有身價、開叫席位選「北」
-
-手牌（北）：♠ `AKQ`　♥ `KJ74`　♦ `A63`　♣ `Q82`
-
-叫牌序列：
-```
-1NT  P  3NT  P
-P  P
-```
-→ 北 1NT → 東 Pass → 南 3NT → 西 Pass → 北 Pass → 東 Pass（南打 3NT）
-
-改好任何欄位，**右側預覽即時更新**；滿意後按左下「📸 匯出楓葉精裝版牌圖 (PNG)」下載。
-"""
-    )
-
 # ---- 預設牌局 -------------------------------------------------------------
 DEFAULT_HANDS = {
     "N": {"S": "A K Q", "H": "K J 7 4", "D": "A 6 3", "C": "Q 8 2"},
@@ -739,49 +689,77 @@ DEFAULT_HANDS = {
     "S": {"S": "T 8 6 4 2", "H": "T 6 5", "D": "7 4", "C": "A J 3"},
     "W": {"S": "7 3", "H": "8 3 2", "D": "Q J 5 2", "C": "T 9 6 4"},
 }
+SEAT_ZH = {"W": "西", "N": "北", "E": "東", "S": "南"}
 
-with st.sidebar:
-    st.header("① 賽事基本資訊")
+with st.expander("📖 輸入說明 · 快速對照鍵（第一次使用請先看）", expanded=False):
+    st.markdown(
+        """
+| 區塊 | 怎麼填 |
+| --- | --- |
+| **① 基本資訊** | 賽事名稱、副數與發牌、發牌者、身價（雙無 / 南北 / 東西 / 雙方） |
+| **② 四家手牌** | 每家 ♠♥♦♣ 各一格，直接打點數如 `AKQ` 或 `A K Q`；`10` 自動轉 `T`；**缺門打 `--`** |
+| **③ 叫牌區** | 室別標題、四席選手姓名、叫牌序列（**每行一輪**、空白分隔、`P`=Pass `X`=Dbl `XX`=Rdbl）、叫牌註解 |
+
+先在「**開叫席位**」選第一個叫牌的人，系統會自動把叫品對齊正確欄位。改好任一欄位，右側預覽即時更新 → 按「📸 匯出」下載 PNG。
+"""
+    )
+
+form_col, preview_col = st.columns([1, 1], gap="large")
+
+# ======================= 左：輸入鍵 =======================
+with form_col:
+    # ---- ① 基本資訊 ----
+    st.markdown("### ① 基本資訊")
     title = st.text_input("賽事名稱", "2026 中華橋協秋季公開賽")
-    session = st.text_input("副數 / 場次", "第 3 循環")
-    board = st.text_input("發牌編號（第幾副）", "18")
-    dealer = st.selectbox("發牌者 (Dealer)", SEATS, index=1,
-                          format_func=lambda x: SEAT_LABEL[x])
-    vuln_label = st.selectbox("身價 (Vulnerability)", list(VULN_OPTIONS.keys()), index=1)
+    session = st.text_input("副數與發牌", "第 3 循環")
+    b1, b2 = st.columns([1, 2])
+    with b1:
+        board = st.text_input("發牌編號", "18")
+    with b2:
+        dealer = st.radio("發牌者 (Dealer)", SEATS, index=1, horizontal=True,
+                          format_func=lambda x: SEAT_ZH[x])
+    vuln_label = st.radio(
+        "身價 (Vulnerability)", list(VULN_OPTIONS.keys()), index=1, horizontal=True,
+        format_func=lambda x: x.split(" (")[0],
+    )
 
-    st.divider()
-    st.header("③ 叫牌區")
+    # ---- ② 四家手牌 ----
+    st.markdown("### ② 四家手牌　·　缺門請輸入 `--`")
+    hands: dict = {}
+    for seat in ["W", "N", "E", "S"]:
+        st.markdown(f"**{SEAT_ZH[seat]}家 {SEAT_LABEL[seat].split()[1]}**")
+        hands[seat] = {}
+        scols = st.columns(4)
+        for i, (key, sym) in enumerate(SUITS):
+            with scols[i]:
+                hands[seat][key] = st.text_input(
+                    sym, DEFAULT_HANDS[seat][key], key=f"h_{seat}_{key}",
+                )
+
+    # ---- ③ 叫牌區 ----
+    st.markdown("### ③ 叫牌區")
     room = st.text_input("室別標題", "公開室 Open Room")
-    first_seat = st.selectbox("開叫席位 (首叫)", SEATS, index=1,
-                              format_func=lambda x: SEAT_LABEL[x])
-    c1, c2 = st.columns(2)
+    first_seat = st.radio("開叫席位（第一個叫牌的人）", SEATS, index=1, horizontal=True,
+                          format_func=lambda x: SEAT_ZH[x])
+    st.caption("選手席位姓名")
+    n1, n2 = st.columns(2)
     names = {}
-    with c1:
-        names["W"] = st.text_input("西 選手", "")
-        names["N"] = st.text_input("北 選手", "")
-    with c2:
-        names["E"] = st.text_input("東 選手", "")
-        names["S"] = st.text_input("南 選手", "")
+    with n1:
+        names["W"] = st.text_input("西 選手", "", key="nm_W")
+        names["N"] = st.text_input("北 選手", "", key="nm_N")
+    with n2:
+        names["E"] = st.text_input("東 選手", "", key="nm_E")
+        names["S"] = st.text_input("南 選手", "", key="nm_S")
     bidding = st.text_area(
-        "叫牌序列（每行一輪；空白分隔；P=Pass, X=Dbl, XX=Rdbl）",
+        "多行文字叫牌序列（每行一輪；空白分隔；P=Pass、X=Dbl、XX=Rdbl）",
         "1NT  P  3NT  P\nP  P",
         height=120,
     )
-    notes = st.text_area("叫牌註解 / 備註（每行一則）",
-                         "1NT：15–17 大牌點，平均牌型\n3NT：北家有把握的一擊到位", height=90)
-
-st.subheader("② 四家手牌　（輸入 -- 代表缺門）")
-hands: dict = {}
-hcols = st.columns(4)
-for idx, seat in enumerate(["W", "N", "E", "S"]):
-    with hcols[idx]:
-        st.markdown(f"**{SEAT_LABEL[seat]}**")
-        hands[seat] = {}
-        for key, sym in SUITS:
-            hands[seat][key] = st.text_input(
-                f"{sym} {seat}", DEFAULT_HANDS[seat][key], key=f"{seat}_{key}",
-                label_visibility="visible",
-            )
+    notes = st.text_area(
+        "叫牌註解備註（每行一則）",
+        "1NT：15–17 大牌點，平均牌型\n3NT：北家有把握的一擊到位",
+        height=90,
+    )
 
 data = {
     "title": title,
@@ -798,12 +776,19 @@ data = {
     "notes": notes,
 }
 
-st.divider()
-left, right = st.columns([5, 6], gap="large")
+# ======================= 右：即時預覽 + 匯出 =======================
+with preview_col:
+    st.markdown("### 🍁 即時預覽")
+    preview_html = build_diagram_html(data, scale=1.0, for_export=False)
+    n_rows = len(parse_bidding(data["bidding"], data["first_seat"]))
+    n_notes = len([x for x in (notes or "").splitlines() if x.strip()])
+    height = 470 + 34 * n_rows + 22 * n_notes + 90
+    st.markdown('<div class="preview-wrap">', unsafe_allow_html=True)
+    st.components.v1.html(preview_html, height=height, scrolling=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-with left:
-    st.subheader("🍁 匯出")
-    st.write("產出寬 540px、300DPI 級（3×）高解析度照片，並自動裁切留白。")
+    st.markdown("#### 匯出")
+    st.caption("寬 540px、300DPI 級（3×）高解析度照片，自動裁切留白。")
     if st.button("📸 匯出楓葉精裝版牌圖 (PNG)", use_container_width=True):
         with st.spinner("正在以楓葉油墨印製…"):
             try:
@@ -814,7 +799,7 @@ with left:
                 )
             except Exception as exc:  # noqa: BLE001
                 st.error(f"匯出失敗：{exc}")
-                st.info("若在雲端，請確認 packages.txt 已安裝 chromium。")
+                st.info("若在雲端，請確認 packages.txt 已安裝 chromium，並 Reboot app 一次。")
 
     if st.session_state.get("png"):
         st.download_button(
@@ -824,17 +809,7 @@ with left:
             mime="image/png",
             use_container_width=True,
         )
-        st.image(st.session_state["png"], caption="最終產出預覽", use_container_width=True)
-
-with right:
-    st.subheader("即時預覽")
-    preview_html = build_diagram_html(data, scale=1.0, for_export=False)
-    n_rows = len(parse_bidding(data["bidding"], data["first_seat"]))
-    n_notes = len([x for x in (notes or "").splitlines() if x.strip()])
-    height = 470 + 34 * n_rows + 22 * n_notes + 90
-    st.markdown('<div class="preview-wrap">', unsafe_allow_html=True)
-    st.components.v1.html(preview_html, height=height, scrolling=True)
-    st.markdown("</div>", unsafe_allow_html=True)
+        st.image(st.session_state["png"], caption="最終產出（已下載檔）", use_container_width=True)
 
 st.divider()
 st.caption(
