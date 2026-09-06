@@ -812,7 +812,4 @@ with preview_col:
         st.image(st.session_state["png"], caption="最終產出（已下載檔）", use_container_width=True)
 
 st.divider()
-st.caption(
-    "🍁 牌局與叫牌排版工作台　·　開放使用、免登入　·　"
-    "配色：楓葉赤紅 / 琥珀落葉金 / 羊皮紙米白　·　Editorial Art Direction"
-)
+st.caption("🍁 金牌橋藝教室🍁")
