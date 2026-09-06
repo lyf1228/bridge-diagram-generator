@@ -704,22 +704,58 @@ with st.expander("📖 輸入說明 · 快速對照鍵（第一次使用請先�
 """
     )
 
+# ---- 範例牌局（僅供「載入範例」按鈕填入，預設欄位一律留空）------------------
+EXAMPLE = {
+    "f_title": "2026 中華橋協秋季公開賽",
+    "f_session": "第 3 循環",
+    "f_board": "18",
+    "f_dealer": "N",
+    "f_vuln": "南北 (N-S)",
+    "f_room": "公開室 Open Room",
+    "f_first": "N",
+    "nm_W": "", "nm_N": "王小明", "nm_E": "", "nm_S": "李大華",
+    "f_bidding": "1NT  P  3NT  P\nP  P",
+    "f_notes": "1NT：15–17 大牌點，平均牌型\n3NT：北家有把握的一擊到位",
+}
+for _seat, _holds in DEFAULT_HANDS.items():
+    for _k, _v in _holds.items():
+        EXAMPLE[f"h_{_seat}_{_k}"] = _v
+
+# 選擇鈕仍需一個預設選項（不是空白文字框，不影響「可修改」的辨識度）
+st.session_state.setdefault("f_dealer", "N")
+st.session_state.setdefault("f_vuln", "南北 (N-S)")
+st.session_state.setdefault("f_first", "N")
+
 form_col, preview_col = st.columns([1, 1], gap="large")
 
 # ======================= 左：輸入鍵 =======================
 with form_col:
+    eb1, eb2 = st.columns(2)
+    if eb1.button("🎴 載入範例牌局", use_container_width=True):
+        for _key, _val in EXAMPLE.items():
+            st.session_state[_key] = _val
+        st.rerun()
+    if eb2.button("🧹 全部清空", use_container_width=True):
+        for _key in EXAMPLE:
+            if not _key.startswith("f_dealer") and not _key.startswith("f_vuln") \
+                    and not _key.startswith("f_first"):
+                st.session_state[_key] = ""
+        st.rerun()
+    st.caption("👇 下面每一格都可以點進去輸入 / 修改；空白處的淺灰字只是範例提示。")
+
     # ---- ① 基本資訊 ----
     st.markdown("### ① 基本資訊")
-    title = st.text_input("賽事名稱", "2026 中華橋協秋季公開賽")
-    session = st.text_input("副數與發牌", "第 3 循環")
+    title = st.text_input("賽事名稱", key="f_title",
+                          placeholder="例：2026 中華橋協秋季公開賽")
+    session = st.text_input("副數與發牌", key="f_session", placeholder="例：第 3 循環")
     b1, b2 = st.columns([1, 2])
     with b1:
-        board = st.text_input("發牌編號", "18")
+        board = st.text_input("發牌編號", key="f_board", placeholder="例：18")
     with b2:
-        dealer = st.radio("發牌者 (Dealer)", SEATS, index=1, horizontal=True,
+        dealer = st.radio("發牌者 (Dealer)", SEATS, key="f_dealer", horizontal=True,
                           format_func=lambda x: SEAT_ZH[x])
     vuln_label = st.radio(
-        "身價 (Vulnerability)", list(VULN_OPTIONS.keys()), index=1, horizontal=True,
+        "身價 (Vulnerability)", list(VULN_OPTIONS.keys()), key="f_vuln", horizontal=True,
         format_func=lambda x: x.split(" (")[0],
     )
 
@@ -733,38 +769,39 @@ with form_col:
         for i, (key, sym) in enumerate(SUITS):
             with scols[i]:
                 hands[seat][key] = st.text_input(
-                    sym, DEFAULT_HANDS[seat][key], key=f"h_{seat}_{key}",
+                    sym, key=f"h_{seat}_{key}",
+                    placeholder=DEFAULT_HANDS[seat][key].replace(" ", ""),
                 )
 
     # ---- ③ 叫牌區 ----
     st.markdown("### ③ 叫牌區")
-    room = st.text_input("室別標題", "公開室 Open Room")
-    first_seat = st.radio("開叫席位（第一個叫牌的人）", SEATS, index=1, horizontal=True,
-                          format_func=lambda x: SEAT_ZH[x])
+    room = st.text_input("室別標題", key="f_room", placeholder="例：公開室 Open Room")
+    first_seat = st.radio("開叫席位（第一個叫牌的人）", SEATS, key="f_first",
+                          horizontal=True, format_func=lambda x: SEAT_ZH[x])
     st.caption("選手席位姓名")
     n1, n2 = st.columns(2)
     names = {}
     with n1:
-        names["W"] = st.text_input("西 選手", "", key="nm_W")
-        names["N"] = st.text_input("北 選手", "", key="nm_N")
+        names["W"] = st.text_input("西 選手", key="nm_W", placeholder="選填")
+        names["N"] = st.text_input("北 選手", key="nm_N", placeholder="選填")
     with n2:
-        names["E"] = st.text_input("東 選手", "", key="nm_E")
-        names["S"] = st.text_input("南 選手", "", key="nm_S")
+        names["E"] = st.text_input("東 選手", key="nm_E", placeholder="選填")
+        names["S"] = st.text_input("南 選手", key="nm_S", placeholder="選填")
     bidding = st.text_area(
         "多行文字叫牌序列（每行一輪；空白分隔；P=Pass、X=Dbl、XX=Rdbl）",
-        "1NT  P  3NT  P\nP  P",
-        height=120,
+        key="f_bidding", height=120,
+        placeholder="1NT  P  3NT  P\nP  P",
     )
     notes = st.text_area(
         "叫牌註解備註（每行一則）",
-        "1NT：15–17 大牌點，平均牌型\n3NT：北家有把握的一擊到位",
-        height=90,
+        key="f_notes", height=90,
+        placeholder="1NT：15–17 大牌點，平均牌型\n3NT：北家有把握的一擊到位",
     )
 
 data = {
     "title": title,
     "session": session,
-    "board": board.strip(),
+    "board": (board or "").strip(),
     "dealer": dealer,
     "vuln_label": vuln_label.split(" (")[0],
     "vuln_seats": VULN_OPTIONS[vuln_label],
