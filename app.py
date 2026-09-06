@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-🍁 中橋秋季特輯 · 牌圖與叫牌排版工作台
+🍁 牌局與叫牌排版工作台
 Bridge Diagram Generator — Autumn Maple Editorial Edition
 
 開放給大眾使用、免登入、即時預覽、一鍵下載 300DPI 級 PNG。
@@ -274,7 +274,7 @@ def build_diagram_html(data: dict, *, scale: float = 1.0, for_export: bool = Fal
         '<header class="hdr">'
         f'  <span class="hdr-leaf l">{maple_svg(p["crimson"], 0.95)}</span>'
         f'  <div class="hdr-mid">'
-        f'    <div class="kicker">🍁 中橋秋季特輯</div>'
+        f'    <div class="kicker">🍁 AUTUMN MAPLE 🍁</div>'
         f'    <h1>{data["title"] or "橋牌牌局"}</h1>'
         f'    <div class="subtitle">{subtitle}</div>'
         f'  </div>'
@@ -582,7 +582,7 @@ def render_png(data: dict) -> bytes:
 # Streamlit 介面
 # ---------------------------------------------------------------------------
 st.set_page_config(
-    page_title="中橋秋季特輯 · 牌圖與叫牌排版工作台",
+    page_title="牌局與叫牌排版工作台",
     page_icon="🍁",
     layout="wide",
 )
@@ -670,8 +670,8 @@ st.markdown(UI_CSS, unsafe_allow_html=True)
 st.markdown(
     """
 <div class="autumn-banner">
-  <h1>🍁 中橋秋季特輯 · 牌圖與叫牌排版工作台</h1>
-  <p>免登入 · 即時預覽 · 一鍵下載出版級 PNG　—　秋風、紅楓葉、羊皮紙的編排美學</p>
+  <h1>🍁 牌局與叫牌排版工作台</h1>
+  <p>免登入 · 即時預覽 · 一鍵下載出版級 PNG</p>
   <div class="chips">
     <span class="chip">AUTUMN MAPLE EDITION</span>
     <span class="chip">540PX · 300DPI 級</span>
@@ -813,6 +813,6 @@ with preview_col:
 
 st.divider()
 st.caption(
-    "🍁 中橋秋季特輯　·　開放使用、免登入　·　"
+    "🍁 牌局與叫牌排版工作台　·　開放使用、免登入　·　"
     "配色：楓葉赤紅 / 琥珀落葉金 / 羊皮紙米白　·　Editorial Art Direction"
 )
