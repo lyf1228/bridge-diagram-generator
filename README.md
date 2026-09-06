@@ -14,7 +14,7 @@
 - **叫牌區**：室別標題、四席選手姓名、多行叫牌序列（`P`=Pass、`X`=Dbl、`XX`=Rdbl）、叫牌註解。
 - **即時預覽**：右側同步呈現楓葉秋風美感的牌圖卡片。
 - **一鍵匯出**：`html2image` 產生寬 540px、3× 高解析度 PNG，自動裁切留白，
-  檔名 `Bridge_Diagram_Autumn_{timestamp}.png`。
+  檔名 `Bridge_Diagram_{timestamp}.png`。
 
 ## 秋季楓葉色彩計畫
 
