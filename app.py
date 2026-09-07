@@ -92,6 +92,25 @@ SUITS = [
     ("C", "♣"),  # ♣
 ]
 RED_SUITS = {"H", "D"}
+
+# 出版級花色圖案（內嵌 SVG，永遠清晰、跨平台一致）----------------------------------
+SUIT_PIP = {
+    "S": '<path d="M50 6C50 6 16 34 16 58c0 13 10 21 21 18 1 7-4 15-12 20h50c-8-5-13-13-12-20 11 3 21-5 21-18C84 34 50 6 50 6Z"/>',
+    "H": '<path d="M50 88S12 60 12 33C12 20 22 10 35 10c8 0 14 5 15 13 1-8 7-13 15-13 13 0 23 10 23 23 0 27-38 55-38 55Z"/>',
+    "D": '<path d="M50 4 88 50 50 96 12 50Z"/>',
+    "C": ('<circle cx="50" cy="26" r="18"/><circle cx="28" cy="54" r="18"/>'
+          '<circle cx="72" cy="54" r="18"/><path d="M42 50h16l7 44H35Z"/>'),
+}
+
+
+def suit_pip(key: str, cls: str = "pip") -> str:
+    color = PALETTE["suit_red"] if key in RED_SUITS else PALETTE["walnut"]
+    return (
+        f'<svg class="{cls}" viewBox="0 0 100 100" fill="{color}" '
+        f'xmlns="http://www.w3.org/2000/svg">{SUIT_PIP[key]}</svg>'
+    )
+
+
 SEATS = ["W", "N", "E", "S"]
 SEAT_LABEL = {"W": "西 West", "N": "北 North", "E": "東 East", "S": "南 South"}
 
@@ -119,12 +138,11 @@ def clean_holding(raw: str) -> str:
 
 def hand_html(hand: dict) -> str:
     rows = []
-    for key, sym in SUITS:
-        cls = "sr" if key in RED_SUITS else "sk"
+    for key, _sym in SUITS:
         holding = clean_holding(hand.get(key, ""))
         rows.append(
             f'<div class="hrow">'
-            f'<span class="sym {cls}">{sym}</span>'
+            f'{suit_pip(key, "pip pip-hand")}'
             f'<span class="cards">{holding}</span>'
             f'</div>'
         )
@@ -155,9 +173,9 @@ def fmt_call(token: str) -> str:
         level, strain = m.group(1), m.group(2)
         if strain in {"NT", "N"}:
             return f'<span class="call-bid">{level}<span class="nt">NT</span></span>'
-        sym = dict(SUITS)[strain]
-        scls = "sr" if strain in RED_SUITS else "sk"
-        return f'<span class="call-bid">{level}<span class="sym {scls}">{sym}</span></span>'
+        return (
+            f'<span class="call-bid">{level}{suit_pip(strain, "pip pip-call")}</span>'
+        )
     return f'<span class="call-bid">{t}</span>'
 
 
@@ -316,7 +334,7 @@ body {{
 }}
 body.export {{ background:{p['outer']}; }}
 .card {{
-  width:{540*s}px;
+  width:{620*s}px;
   background:linear-gradient(180deg,{p['parchment_hi']} 0%,{p['parchment']} 60%,#F4EFE7 100%);
   border:{1*s}px solid {p['hairline']};
   border-radius:{14*s}px;
@@ -338,17 +356,17 @@ body.export {{ background:{p['outer']}; }}
 
 /* ---------- 頁首 ---------- */
 .hdr {{ display:flex; align-items:center; justify-content:center;
-  gap:{14*s}px; padding:{6*s}px 0 {4*s}px; }}
-.hdr-leaf {{ width:{34*s}px; height:{34*s}px; flex:0 0 auto; display:block; }}
+  gap:{16*s}px; padding:{6*s}px 0 {4*s}px; }}
+.hdr-leaf {{ width:{40*s}px; height:{40*s}px; flex:0 0 auto; display:block; }}
 .hdr-leaf.l {{ transform:rotate(-18deg); }}
 .hdr-leaf.r {{ transform:rotate(16deg) scaleX(-1); }}
 .hdr-mid {{ text-align:center; }}
 .hdr h1 {{
-  font-size:{26*s}px; line-height:1.15; color:{p['crimson_deep']};
-  font-weight:800; letter-spacing:{1*s}px; margin:{2*s}px 0 {4*s}px;
+  font-size:{34*s}px; line-height:1.15; color:{p['crimson_deep']};
+  font-weight:800; letter-spacing:{1*s}px; margin:{2*s}px 0 {6*s}px;
   text-shadow:0 {1*s}px 0 rgba(255,255,255,.6);
 }}
-.subtitle {{ font-size:{11.5*s}px; color:{p['header_ink']}; letter-spacing:{.5*s}px; }}
+.subtitle {{ font-size:{18*s}px; color:{p['header_ink']}; letter-spacing:{.5*s}px; }}
 
 /* ---------- 秋風分隔線 ---------- */
 .wind {{ display:block; width:100%; height:{18*s}px; margin:{4*s}px 0 {8*s}px; }}
@@ -357,43 +375,41 @@ body.export {{ background:{p['outer']}; }}
 .diagram {{
   position:relative;
   display:grid;
-  grid-template-columns:1fr {168*s}px 1fr;
+  grid-template-columns:1fr {176*s}px 1fr;
   grid-template-areas:". n ." "w mid e" ". s .";
   gap:{4*s}px {6*s}px;
   align-items:center; justify-items:center;
   padding:{6*s}px 0 {8*s}px;
 }}
-.wm {{ position:absolute; left:50%; top:50%; width:{176*s}px; height:{176*s}px;
+.wm {{ position:absolute; left:50%; top:50%; width:{188*s}px; height:{188*s}px;
   transform:translate(-50%,-50%); pointer-events:none; }}
 .seat-n {{ grid-area:n; }} .seat-w {{ grid-area:w; justify-self:end; }}
 .seat-e {{ grid-area:e; justify-self:start; }} .seat-s {{ grid-area:s; }}
 .mid {{ grid-area:mid; }}
-.seat {{ min-width:{150*s}px; }}
+.seat {{ min-width:{188*s}px; max-width:{210*s}px; }}
 .seat-tag {{
-  font-size:{10*s}px; letter-spacing:{2*s}px; color:{p['ember']};
-  font-weight:700; margin-bottom:{2*s}px; text-align:left;
+  font-size:{18*s}px; letter-spacing:{2*s}px; color:{p['ember']};
+  font-weight:700; margin-bottom:{3*s}px; text-align:left;
 }}
 .seat-w .seat-tag, .seat-e .seat-tag {{ text-align:left; }}
 .hand {{
   background:{p['parchment_hi']};
   border:{1*s}px solid {p['hairline']};
-  border-left:{3*s}px solid {p['amber']};
+  border-left:{4*s}px solid {p['amber']};
   border-radius:{7*s}px;
-  padding:{6*s}px {9*s}px;
+  padding:{7*s}px {10*s}px;
   box-shadow:0 {1*s}px {3*s}px rgba(91,58,41,.08);
 }}
-.hrow {{ display:flex; align-items:baseline; gap:{6*s}px;
-  font-size:{13.5*s}px; line-height:1.5; }}
-.sym {{ font-size:{13*s}px; width:{14*s}px; display:inline-block;
-  font-family:'Arial Unicode MS','Apple Symbols',sans-serif; }}
-.sr {{ color:{p['suit_red']}; }}
-.sk {{ color:{p['walnut']}; }}
-.cards {{ color:{p['walnut']}; letter-spacing:{1.5*s}px;
-  font-variant-numeric:tabular-nums; }}
+.hrow {{ display:flex; align-items:center; gap:{8*s}px;
+  font-size:{18*s}px; line-height:1.55; }}
+.pip {{ display:inline-block; flex:0 0 auto; }}
+.pip-hand {{ width:{22*s}px; height:{22*s}px; }}
+.cards {{ color:{p['walnut']}; letter-spacing:{1*s}px; font-weight:600;
+  font-variant-numeric:tabular-nums; white-space:nowrap; }}
 
 /* ---------- 指南針羅盤 ---------- */
 .compass {{
-  position:relative; width:{164*s}px; height:{164*s}px;
+  position:relative; width:{176*s}px; height:{176*s}px;
   background:radial-gradient(circle at 38% 30%,#F5EAD6,#E7D2AF 68%,#D6BA8D);
   border:{1.5*s}px solid {p['amber']};
   border-radius:{16*s}px;
@@ -403,20 +419,20 @@ body.export {{ background:{p['outer']}; }}
   gap:{7*s}px;
   padding:{12*s}px;
 }}
-.compass-bg {{ position:absolute; inset:{26*s}px; opacity:.4; }}
+.compass-bg {{ position:absolute; inset:{28*s}px; opacity:.4; }}
 .cc-row {{ display:flex; align-items:center; justify-content:center;
   gap:{12*s}px; width:100%; }}
 .cc-mid {{ gap:{9*s}px; }}
 .cc {{
   position:relative;
-  font-size:{12.5*s}px; font-weight:800; color:{p['header_ink']};
-  width:{23*s}px; height:{19*s}px; display:flex; align-items:center;
-  justify-content:center; border-radius:{5*s}px;
+  font-size:{18*s}px; font-weight:800; color:{p['header_ink']};
+  width:{28*s}px; height:{25*s}px; display:flex; align-items:center;
+  justify-content:center; border-radius:{6*s}px;
 }}
 .cc-vlabel {{
   position:absolute; bottom:{5*s}px; left:0; right:0; text-align:center;
-  font-size:{7*s}px; font-weight:700; letter-spacing:{1.5*s}px;
-  color:{p['header_ink']}; opacity:.7; text-transform:uppercase;
+  font-size:{11*s}px; font-weight:700; letter-spacing:{1.5*s}px;
+  color:{p['header_ink']}; opacity:.7;
 }}
 .cc-dealer {{ box-shadow:0 0 0 {1.5*s}px {p['header_ink']}; }}
 .cc-vuln {{
@@ -425,48 +441,48 @@ body.export {{ background:{p['outer']}; }}
 }}
 .cc-vuln.cc-dealer {{ box-shadow:0 0 0 {1.5*s}px {p['header_ink']},
   0 {1*s}px {3*s}px rgba(158,42,43,.5); }}
-.cc-d {{ position:absolute; top:{-6*s}px; right:{-8*s}px;
-  width:{11*s}px; height:{11*s}px; border-radius:50%;
+.cc-d {{ position:absolute; top:{-7*s}px; right:{-9*s}px;
+  width:{14*s}px; height:{14*s}px; border-radius:50%;
   background:{p['ember']}; color:#FFF4E8;
-  font-size:{7*s}px; font-weight:800; line-height:{11*s}px; text-align:center;
+  font-size:{9*s}px; font-weight:800; line-height:{14*s}px; text-align:center;
   box-shadow:0 {1*s}px {2*s}px rgba(91,58,41,.35); }}
 .cc-hub {{
-  min-width:{34*s}px; height:{30*s}px; padding:0 {7*s}px;
+  min-width:{40*s}px; height:{34*s}px; padding:0 {8*s}px;
   background:linear-gradient(180deg,{p['parchment_hi']},#EFE2CB);
   border:{1*s}px solid {p['amber']}; border-radius:{6*s}px;
   display:flex; align-items:center; justify-content:center;
-  font-size:{15*s}px; font-weight:800; color:{p['crimson_deep']};
+  font-size:{20*s}px; font-weight:800; color:{p['crimson_deep']};
   box-shadow:inset 0 {1*s}px {2*s}px rgba(255,255,255,.6);
 }}
 
 /* ---------- 叫牌表 ---------- */
-.bidsec {{ margin-top:{6*s}px; }}
+.bidsec {{ margin-top:{8*s}px; }}
 .bidsec-h {{
-  display:flex; align-items:center; gap:{7*s}px;
-  font-size:{13*s}px; font-weight:800; color:{p['crimson_deep']};
-  padding-bottom:{6*s}px;
+  display:flex; align-items:center; gap:{8*s}px;
+  font-size:{18*s}px; font-weight:800; color:{p['crimson_deep']};
+  padding-bottom:{7*s}px;
 }}
-.bh-leaf {{ width:{15*s}px; height:{15*s}px; display:inline-block; }}
+.bh-leaf {{ width:{20*s}px; height:{20*s}px; display:inline-block; }}
 .room {{
-  margin-left:auto; font-size:{10*s}px; font-weight:700; letter-spacing:{1*s}px;
+  margin-left:auto; font-size:{15*s}px; font-weight:700; letter-spacing:{1*s}px;
   color:{p['header_ink']}; background:{p['maple_wood']};
   border:{1*s}px solid {p['amber']}; border-radius:{20*s}px;
-  padding:{2*s}px {10*s}px;
+  padding:{3*s}px {12*s}px;
 }}
 .bidtable {{ width:100%; border-collapse:separate; border-spacing:0;
   border:{1*s}px solid {p['amber']}; border-radius:{8*s}px; overflow:hidden;
-  font-size:{12.5*s}px; }}
+  font-size:{18*s}px; }}
 .bidtable th {{
   background:linear-gradient(180deg,{p['maple_wood']},#F6D976);
   color:{p['header_ink']}; font-weight:800;
-  padding:{6*s}px {4*s}px {5*s}px; text-align:center;
+  padding:{7*s}px {4*s}px {6*s}px; text-align:center;
   border-bottom:{1*s}px solid {p['amber']};
   letter-spacing:{1*s}px;
 }}
-.th-en {{ display:block; font-size:{8*s}px; font-weight:600; letter-spacing:{1*s}px;
+.th-en {{ display:block; font-size:{11*s}px; font-weight:600; letter-spacing:{1*s}px;
   opacity:.7; }}
 .bidtable td {{
-  padding:{5*s}px {4*s}px; text-align:center; color:{p['walnut']};
+  padding:{7*s}px {4*s}px; text-align:center; color:{p['walnut']};
   border-bottom:{1*s}px solid {p['hairline']};
   font-variant-numeric:tabular-nums;
 }}
@@ -474,13 +490,14 @@ body.export {{ background:{p['outer']}; }}
 .bidtable td + td, .bidtable th + th {{ border-left:{1*s}px solid {p['hairline']}; }}
 tr.zebra td {{ background:{p['tea']}; }}
 tr.names td {{
-  background:#FBEFD9; font-size:{10*s}px; font-weight:700; color:{p['header_ink']};
-  padding:{3*s}px {4*s}px; border-bottom:{1.4*s}px solid {p['amber']};
+  background:#FBEFD9; font-size:{16*s}px; font-weight:700; color:{p['header_ink']};
+  padding:{5*s}px {4*s}px; border-bottom:{1.4*s}px solid {p['amber']};
 }}
 td.nm {{ letter-spacing:{.5*s}px; }}
-.call-bid {{ font-weight:800; color:{p['walnut']}; }}
-.call-bid .sym {{ font-size:{11*s}px; width:auto; }}
-.call-bid .nt {{ font-size:{9*s}px; letter-spacing:{.5*s}px; }}
+.call-bid {{ font-weight:800; color:{p['walnut']}; display:inline-flex;
+  align-items:center; gap:{2*s}px; }}
+.pip-call {{ width:{17*s}px; height:{17*s}px; }}
+.call-bid .nt {{ font-size:{13*s}px; letter-spacing:{.5*s}px; }}
 .call-pass {{ color:#8A7A63; font-style:italic; }}
 .call-x {{ color:{p['suit_red']}; font-weight:800; }}
 
@@ -490,14 +507,14 @@ td.nm {{ letter-spacing:{.5*s}px; }}
   border:{1*s}px solid {p['hairline']}; border-left:{3*s}px solid {p['ember']};
   border-radius:{6*s}px; padding:{7*s}px {12*s}px;
 }}
-.notes-h {{ font-size:{10*s}px; font-weight:800; letter-spacing:{1.5*s}px;
-  color:{p['ember']}; margin-bottom:{3*s}px; }}
-.notes ul {{ margin:0; padding-left:{16*s}px; }}
-.notes li {{ font-size:{11*s}px; line-height:1.6; color:{p['header_ink']}; }}
+.notes-h {{ font-size:{15*s}px; font-weight:800; letter-spacing:{1.5*s}px;
+  color:{p['ember']}; margin-bottom:{4*s}px; }}
+.notes ul {{ margin:0; padding-left:{20*s}px; }}
+.notes li {{ font-size:{18*s}px; line-height:1.6; color:{p['header_ink']}; }}
 
 /* ---------- 頁尾 ---------- */
-.ftr {{ text-align:center; padding-top:{4*s}px; }}
-.ftr span {{ font-size:{9.5*s}px; letter-spacing:{4*s}px; color:{p['amber']}; }}
+.ftr {{ text-align:center; padding-top:{6*s}px; }}
+.ftr span {{ font-size:{13*s}px; letter-spacing:{4*s}px; color:{p['amber']}; }}
 """
 
 
@@ -523,11 +540,11 @@ def _find_chromium() -> str | None:
 
 
 def render_png(data: dict) -> bytes:
-    """以 html2image 產生寬 540px、300DPI 級（3x）高解析度 PNG，並自動裁切留白。"""
+    """以 html2image 產生寬 620px、300DPI 級（3x）高解析度 PNG，並自動裁切留白。"""
     from html2image import Html2Image
     from PIL import Image, ImageChops
 
-    export_scale = 3  # 540 * 3 = 1620px 寬 ≈ 300DPI
+    export_scale = 3  # 620 * 3 = 1860px 寬 ≈ 300DPI
     html = build_diagram_html(data, scale=export_scale, for_export=True)
 
     chromium = _find_chromium()
@@ -552,7 +569,7 @@ def render_png(data: dict) -> bytes:
         hti.screenshot(
             html_str=html,
             save_as=out_name,
-            size=(540 * export_scale + 40, 4200),
+            size=(620 * export_scale + 40, 4600),
         )
         raw = Path(tmp) / out_name
         img = Image.open(raw).convert("RGB")
@@ -670,7 +687,7 @@ st.markdown(
   <p>免登入 · 即時預覽 · 一鍵下載出版級 PNG</p>
   <div class="chips">
     <span class="chip">AUTUMN MAPLE EDITION</span>
-    <span class="chip">540PX · 300DPI 級</span>
+    <span class="chip">620PX · 300DPI 級</span>
     <span class="chip">EDITORIAL TYPOGRAPHY</span>
   </div>
 </div>
@@ -821,7 +838,7 @@ with preview_col:
     st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown("#### 匯出")
-    st.caption("寬 540px、300DPI 級（3×）高解析度照片，自動裁切留白。")
+    st.caption("寬 620px、300DPI 級（3×）高解析度照片，自動裁切留白。")
     if st.button("📸 匯出牌局叫牌圖", use_container_width=True):
         with st.spinner("正在以楓葉油墨印製…"):
             try:
