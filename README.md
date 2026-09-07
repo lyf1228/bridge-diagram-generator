@@ -42,3 +42,22 @@ streamlit run app.py
 3. `requirements.txt` 會自動安裝 Python 套件；`packages.txt` 會安裝 `chromium`
    供 `html2image` 匯出使用。
 4. Deploy，即可取得公開、免登入的網址。
+
+## 選用：把每張匯出圖收集到雲端硬碟
+
+啟用後，使用者匯出的每張 PNG 除了可自行下載，也會自動存進
+`lyf1228@gmail.com` 的 Google 雲端硬碟（用 Google Apps Script，
+不需要 Google Cloud 專案或服務帳戶）。
+
+1. 依 [`drive_collector.gs`](drive_collector.gs) 內的步驟，用 `lyf1228@gmail.com`
+   在 <https://script.google.com> 部署一個「網頁應用程式」（執行身分：我；存取權：任何人）。
+2. 把取得的 `/exec` 網址與自訂密鑰填入 Streamlit Cloud → **Settings → Secrets**
+   （格式見 [`.streamlit/secrets.toml.example`](.streamlit/secrets.toml.example)）：
+
+   ```toml
+   drive_webhook_url = "https://script.google.com/macros/s/AKfyc.../exec"
+   drive_webhook_secret = "與 drive_collector.gs 的 SHARED_SECRET 相同"
+   ```
+
+3. 存檔後 App 自動重啟，匯出頁會顯示「☁️ 會自動存入雲端硬碟」，
+   完成後顯示成功訊息與檔案連結。未設定 secrets 時此功能自動隱藏、不影響下載。

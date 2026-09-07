@@ -592,6 +592,52 @@ def render_png(data: dict) -> bytes:
 
 
 # ---------------------------------------------------------------------------
+# 雲端硬碟收集（Google Apps Script Web App）
+# ---------------------------------------------------------------------------
+def _secret(name: str, default: str = "") -> str:
+    try:
+        if name in st.secrets:
+            return str(st.secrets[name])
+    except Exception:  # noqa: BLE001  (本機沒 secrets.toml 時)
+        pass
+    import os
+
+    return os.environ.get(name.upper(), default)
+
+
+def drive_enabled() -> bool:
+    return bool(_secret("drive_webhook_url"))
+
+
+def upload_to_drive(png: bytes, filename: str, description: str = "") -> tuple[bool, str]:
+    """把 PNG 交給 lyf1228@gmail.com 部署的 Apps Script，寫入其雲端硬碟資料夾。"""
+    url = _secret("drive_webhook_url")
+    if not url:
+        return False, "尚未設定 drive_webhook_url"
+    import requests
+
+    try:
+        resp = requests.post(
+            url,
+            json={
+                "filename": filename,
+                "mimeType": "image/png",
+                "data": base64.b64encode(png).decode("ascii"),
+                "secret": _secret("drive_webhook_secret"),
+                "description": description,
+            },
+            timeout=45,
+        )
+        resp.raise_for_status()
+        payload = resp.json()
+    except Exception as exc:  # noqa: BLE001
+        return False, f"連線失敗：{exc}"
+    if payload.get("ok"):
+        return True, payload.get("url", "")
+    return False, str(payload.get("error", "未知錯誤"))
+
+
+# ---------------------------------------------------------------------------
 # Streamlit 介面
 # ---------------------------------------------------------------------------
 st.set_page_config(
@@ -839,6 +885,8 @@ with preview_col:
 
     st.markdown("#### 匯出")
     st.caption("寬 620px、300DPI 級（3×）高解析度照片，自動裁切留白。")
+    if drive_enabled():
+        st.caption("☁️ 產出後除了可下載，也會自動存入「金牌橋藝教室」的雲端硬碟收藏。")
     if st.button("📸 匯出牌局叫牌圖", use_container_width=True):
         with st.spinner("正在以楓葉油墨印製…"):
             try:
@@ -847,9 +895,22 @@ with preview_col:
                 st.session_state["png_name"] = (
                     f"Bridge_Diagram_{datetime.now():%Y%m%d_%H%M%S}.png"
                 )
+                st.session_state.pop("drive_msg", None)
             except Exception as exc:  # noqa: BLE001
                 st.error(f"匯出失敗：{exc}")
                 st.info("若在雲端，請確認 packages.txt 已安裝 chromium，並 Reboot app 一次。")
+
+        if st.session_state.get("png") and drive_enabled():
+            with st.spinner("同步到雲端硬碟收藏…"):
+                meta = " · ".join(
+                    x for x in [
+                        data.get("title", ""), data.get("session", ""),
+                        (f'第 {data["board"]} 副' if data.get("board") else ""),
+                        (data.get("room") or ""),
+                    ] if x
+                )
+                ok, info = upload_to_drive(png, st.session_state["png_name"], meta)
+            st.session_state["drive_msg"] = ("ok" if ok else "err", info)
 
     if st.session_state.get("png"):
         st.download_button(
@@ -859,6 +920,11 @@ with preview_col:
             mime="image/png",
             use_container_width=True,
         )
+        dm = st.session_state.get("drive_msg")
+        if dm and dm[0] == "ok":
+            st.success("☁️ 已存入雲端硬碟收藏。" + (f"　[開啟]({dm[1]})" if dm[1] else ""))
+        elif dm and dm[0] == "err":
+            st.warning(f"雲端硬碟同步未成功（下載不受影響）：{dm[1]}")
         st.image(st.session_state["png"], caption="最終產出（已下載檔）", use_container_width=True)
 
 st.divider()
