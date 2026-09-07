@@ -675,11 +675,6 @@ UI_CSS = f"""
   font-size:1.9rem; margin:0 0 .3rem; letter-spacing:1px;
 }}
 .autumn-banner p {{ margin:0; font-size:.95rem; opacity:.92; letter-spacing:.5px; }}
-.autumn-banner .chips {{ margin-top:.7rem; display:flex; gap:.5rem; flex-wrap:wrap; }}
-.autumn-banner .chip {{
-  font-size:.72rem; letter-spacing:1px; padding:.2rem .7rem; border-radius:20px;
-  background:rgba(255,244,232,.16); border:1px solid rgba(255,244,232,.35);
-}}
 
 section[data-testid="stSidebar"] {{
   background:linear-gradient(180deg,{PALETTE['parchment_hi']},{PALETTE['tea']});
@@ -731,11 +726,6 @@ st.markdown(
 <div class="autumn-banner">
   <h1>🍁 牌局與叫牌排版工作台</h1>
   <p>免登入 · 即時預覽 · 一鍵下載出版級 PNG</p>
-  <div class="chips">
-    <span class="chip">AUTUMN MAPLE EDITION</span>
-    <span class="chip">620PX · 300DPI 級</span>
-    <span class="chip">EDITORIAL TYPOGRAPHY</span>
-  </div>
 </div>
 """,
     unsafe_allow_html=True,
