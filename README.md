@@ -8,7 +8,7 @@
 | 版本 | 進入點 | 線上版 |
 | --- | --- | --- |
 | 繁體中文 | `app.py` → `run_app("zh")` | <https://bridge-diagram-generator.streamlit.app/> |
-| English | `app_en.py` → `run_app("en")` | *(另外部署一個 app，main file 選 `app_en.py`)* |
+| English | `app_en.py` → `run_app("en")` | <https://bridge-diagram-en.streamlit.app/> |
 
 ![preview](docs/preview.png)
 
