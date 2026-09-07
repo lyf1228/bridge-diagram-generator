@@ -1,22 +1,32 @@
-# 🍁 Bridge Diagram Generator — Autumn Maple Edition
+# 🍁 牌局與叫牌排版工作台
 
-**中橋秋季特輯 · 牌圖與叫牌排版工作台**
+**Bridge Diagram Generator** — 開放給大眾使用、免登入、即時預覽、一鍵下載出版級 PNG 的
+橋牌牌局與叫牌自動生成系統。介面與產出卡片以秋楓、羊皮紙為視覺語彙，追求出版級編排質感。
 
-開放給大眾使用、免登入、即時預覽、一鍵下載 300DPI 級 PNG 的橋牌牌圖與叫牌自動生成系統。
-外觀與產出的卡片圖檔皆以「秋風、紅楓葉、羊皮紙」為視覺語彙，追求出版級的編排質感。
+線上版：<https://bridge-diagram-generator.streamlit.app/>
 
 ![preview](docs/preview.png)
 
 ## 功能
 
-- **賽事基本資訊**：賽事名稱、副數/場次、發牌編號、發牌者、身價（雙無 / 南北 / 東西 / 雙方）。
-- **四家手牌**：♠ ♥ ♦ ♣ 逐門輸入，`--` 代表缺門，自動排序整理。
-- **叫牌區**：室別標題、四席選手姓名、多行叫牌序列（`P`=Pass、`X`=Dbl、`XX`=Rdbl）、叫牌註解。
-- **即時預覽**：右側同步呈現楓葉秋風美感的牌圖卡片。
-- **一鍵匯出**：`html2image` 產生寬 620px、3× 高解析度 PNG，自動裁切留白，
-  檔名 `Bridge_Diagram_{timestamp}.png`。
+- **① 基本資訊**：賽事名稱、副數與發牌、發牌編號、發牌者、身價（雙無 / 南北 / 東西 / 雙方）。
+- **② 四家手牌**：每家 ♠ ♥ ♦ ♣ 逐門輸入，`10` 自動轉 `T`，`--` 代表缺門，自動由大到小排序。
+- **③ 叫牌區**：室別標題、開叫席位、四席選手姓名、多行叫牌序列
+  （每行一輪、空白分隔、`P`=Pass、`X`=Dbl、`XX`=Rdbl）、叫牌註解。
+- **好上手**：欄位預設留空並顯示淺灰範例提示；「🎴 載入範例牌局」一鍵帶入示範資料，
+  「🧹 全部清空」一鍵清除。
+- **即時預覽**：右側同步呈現卡片，改任一欄位立即更新。
+- **一鍵匯出**：`html2image` 產生寬 620px、300DPI 級（3×）高解析度 PNG，
+  自動裁切留白，檔名 `Bridge_Diagram_{timestamp}.png`。
+- **選用雲端收集**：設定後每張匯出圖也會自動存進指定 Google 雲端硬碟（見下方）。
 
-## 秋季楓葉色彩計畫
+## 版面與字體
+
+- 卡片寬 620px；除賽事名稱維持大字外，其餘文字統一約 18pt。
+- ♠ ♥ ♦ ♣ 為內嵌 SVG 花色圖案（大、銳利、顏色精準、Mac / Linux 一致）。
+- 中央方位羅盤：發牌者深褐描邊＋橘點徽記，有身價的一方以楓紅牌匾標示。
+
+## 色彩計畫
 
 | 角色 | 色票 |
 | --- | --- |
@@ -39,8 +49,7 @@ streamlit run app.py
 
 1. 將本倉庫推送到 GitHub。
 2. 前往 <https://share.streamlit.io> → **New app**，選擇此倉庫、分支與 `app.py`。
-3. `requirements.txt` 會自動安裝 Python 套件；`packages.txt` 會安裝 `chromium`
-   供 `html2image` 匯出使用。
+3. `requirements.txt` 安裝 Python 套件；`packages.txt` 安裝 `chromium` 供 `html2image` 匯出。
 4. Deploy，即可取得公開、免登入的網址。
 
 ## 選用：把每張匯出圖收集到雲端硬碟
@@ -50,8 +59,9 @@ streamlit run app.py
 不需要 Google Cloud 專案或服務帳戶）。
 
 1. 依 [`drive_collector.gs`](drive_collector.gs) 內的步驟，用 `lyf1228@gmail.com`
-   在 <https://script.google.com> 部署一個「網頁應用程式」（執行身分：我；存取權：任何人）。
-2. 把取得的 `/exec` 網址與自訂密鑰填入 Streamlit Cloud → **Settings → Secrets**
+   在 <https://script.google.com> 部署一個「網頁應用程式」（執行身分：我；存取權：任何人），
+   複製結尾 `/exec` 的網址。
+2. 把該網址與自訂密鑰填入 Streamlit Cloud → **Settings → Secrets**
    （格式見 [`.streamlit/secrets.toml.example`](.streamlit/secrets.toml.example)）：
 
    ```toml
@@ -59,5 +69,15 @@ streamlit run app.py
    drive_webhook_secret = "與 drive_collector.gs 的 SHARED_SECRET 相同"
    ```
 
-3. 存檔後 App 自動重啟，匯出頁會顯示「☁️ 會自動存入雲端硬碟」，
-   完成後顯示成功訊息與檔案連結。未設定 secrets 時此功能自動隱藏、不影響下載。
+3. 存檔後 App 自動重啟，匯出區會顯示「☁️ …也會自動存入…雲端硬碟收藏」，
+   匯出成功後顯示連結。未設定 secrets 時此功能自動隱藏、不影響下載。
+
+## 檔案
+
+| 檔案 | 用途 |
+| --- | --- |
+| `app.py` | Streamlit 單檔應用（介面、卡片 HTML/CSS、PNG 匯出、雲端上傳） |
+| `requirements.txt` / `packages.txt` | Python 套件 / 系統套件（chromium） |
+| `drive_collector.gs` | Google Apps Script：接收 PNG 並寫入雲端硬碟 |
+| `.streamlit/config.toml` | 主題設定 |
+| `.streamlit/secrets.toml.example` | 雲端硬碟密鑰範本 |
