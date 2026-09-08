@@ -1,14 +1,9 @@
-# 🍁 牌局與叫牌排版工作台 · Bridge Deal & Auction Studio
+# 🍁 牌局與叫牌排版工作台
 
 開放給大眾使用、免登入、即時預覽、一鍵下載出版級 PNG 的橋牌牌局與叫牌自動生成系統。
 介面與產出卡片以秋楓、羊皮紙為視覺語彙，追求出版級編排質感。
 
-**兩個語系版本，共用同一份程式碼（`core.py`）與同一個雲端硬碟收藏：**
-
-| 版本 | 進入點 | 線上版 |
-| --- | --- | --- |
-| 繁體中文 | `app.py` → `run_app("zh")` | <https://bridge-diagram-generator.streamlit.app/> |
-| English | `app_en.py` → `run_app("en")` | <https://bridge-diagram-en.streamlit.app/> |
+線上版：<https://bridge-diagram-generator.streamlit.app/>
 
 ![preview](docs/preview.png)
 
@@ -45,23 +40,17 @@
 
 ```bash
 pip install -r requirements.txt
-streamlit run app.py      # 中文版
-streamlit run app_en.py   # 英文版
+streamlit run app.py
 ```
 
 匯出 PNG 需要本機安裝 Chrome / Chromium（`html2image` 依賴）。
 
 ## 部署到 Streamlit Community Cloud（免費）
 
-中文版與英文版各部署成**一個獨立的 app**（同倉庫、同分支，只差 main file）：
-
 1. 將本倉庫推送到 GitHub。
-2. <https://share.streamlit.io> → **New app** → 選此倉庫、分支，
-   **main file** 中文版填 `app.py`、英文版填 `app_en.py`。
+2. <https://share.streamlit.io> → **New app** → 選此倉庫、分支與 `app.py`。
 3. `requirements.txt` 安裝 Python 套件；`packages.txt` 安裝 `chromium` 供 `html2image` 匯出。
 4. Deploy，取得公開、免登入的網址。
-5. 兩個 app 都到 **Settings → Secrets** 貼上**相同的**
-   `drive_webhook_url` / `drive_webhook_secret`（見下方），兩版匯出的圖就會存進同一個雲端硬碟資料夾。
 
 ## 選用：把每張匯出圖收集到雲端硬碟
 
@@ -87,13 +76,8 @@ streamlit run app_en.py   # 英文版
 
 | 檔案 | 用途 |
 | --- | --- |
-| `core.py` | 共用引擎：語系字串、卡片 HTML/CSS、PNG 匯出、雲端上傳、整個 Streamlit 介面 |
-| `app.py` | 中文版進入點（`run_app("zh")`） |
-| `app_en.py` | 英文版進入點（`run_app("en")`） |
+| `app.py` | Streamlit 單檔應用（介面、卡片 HTML/CSS、PNG 匯出、雲端上傳） |
 | `requirements.txt` / `packages.txt` | Python 套件 / 系統套件（chromium） |
 | `drive_collector.gs` | Google Apps Script：接收 PNG 並寫入雲端硬碟 |
 | `.streamlit/config.toml` | 主題設定 |
 | `.streamlit/secrets.toml.example` | 雲端硬碟密鑰範本 |
-
-新增語系：在 `core.py` 的 `STR` 加一組字典、`SEAT_NAME` 加一列，再建一個
-`app_xx.py` 呼叫 `run_app("xx")` 即可。
