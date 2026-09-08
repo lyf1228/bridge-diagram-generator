@@ -1,4 +1,1 @@
 streamlit>=1.32
-html2image>=2.0.4
-pillow>=10.0
-requests>=2.31

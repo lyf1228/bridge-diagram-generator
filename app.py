@@ -9,12 +9,8 @@ Bridge Diagram Generator — Autumn Maple Editorial Edition
 
 from __future__ import annotations
 
-import base64
-import io
+import json
 import re
-import tempfile
-from datetime import datetime
-from pathlib import Path
 
 import streamlit as st
 
@@ -202,7 +198,16 @@ def parse_bidding(text: str, first_seat: str) -> list[list[str]]:
 # ---------------------------------------------------------------------------
 # 牌圖 HTML 組裝
 # ---------------------------------------------------------------------------
-def build_diagram_html(data: dict, *, scale: float = 1.0, for_export: bool = False) -> str:
+def build_diagram_html(
+    data: dict,
+    *,
+    scale: float = 1.0,
+    for_export: bool = False,
+    interactive: bool = False,
+    webhook: str = "",
+    secret: str = "",
+    meta: str = "",
+) -> str:
     p = PALETTE
     vuln = data["vuln_seats"]
     dealer = data["dealer"]
@@ -307,16 +312,80 @@ def build_diagram_html(data: dict, *, scale: float = 1.0, for_export: bool = Fal
     )
 
     css = _diagram_css(scale)
+
+    export_ui = ""
+    if interactive:
+        cfg = json.dumps(
+            {"webhook": webhook or "", "secret": secret or "", "meta": meta or "",
+             "prefix": "Bridge_Diagram_"}
+        )
+        export_ui = f"""
+  <div class="xbar">
+    <button id="dlbtn" type="button">📸 產生並下載牌局叫牌圖 (PNG)</button>
+    <div id="xstat" class="xstat"></div>
+    <img id="ximg" class="ximg" alt="">
+  </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js"></script>
+  <script>
+  (function() {{
+    var CFG = {cfg};
+    var btn = document.getElementById('dlbtn');
+    var stat = document.getElementById('xstat');
+    var img = document.getElementById('ximg');
+    if (!btn) return;
+    btn.addEventListener('click', async function() {{
+      btn.disabled = true;
+      stat.textContent = '產生中…（首次約需數秒）';
+      img.removeAttribute('src');
+      try {{
+        if (document.fonts && document.fonts.ready) {{ try {{ await document.fonts.ready; }} catch (e) {{}} }}
+        var card = document.querySelector('.card');
+        var url = await htmlToImage.toPng(card, {{
+          pixelRatio: 3, backgroundColor: '#EFE6D8', cacheBust: true
+        }});
+        var d = new Date(), p = function(n) {{ return (n < 10 ? '0' : '') + n; }};
+        var ts = d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + '_'
+               + p(d.getHours()) + p(d.getMinutes()) + p(d.getSeconds());
+        var name = CFG.prefix + ts + '.png';
+        var a = document.createElement('a');
+        a.href = url; a.download = name;
+        document.body.appendChild(a); a.click(); a.remove();
+        img.src = url;
+        stat.textContent = '✅ 已產生 ' + name + '　（沒自動下載的話，長按 / 右鍵下方縮圖另存）';
+        if (CFG.webhook) {{
+          try {{
+            await fetch(CFG.webhook, {{
+              method: 'POST',
+              headers: {{ 'Content-Type': 'text/plain;charset=utf-8' }},
+              body: JSON.stringify({{
+                filename: name, mimeType: 'image/png',
+                data: url.split(',')[1], secret: CFG.secret, description: CFG.meta
+              }})
+            }});
+            stat.textContent += '　·　☁️ 已送入雲端硬碟收藏';
+          }} catch (e) {{
+            stat.textContent += '　·　☁️ 已送出（雲端狀態無法確認）';
+          }}
+        }}
+      }} catch (err) {{
+        stat.textContent = '產生失敗：' + err;
+      }}
+      btn.disabled = false;
+    }});
+  }})();
+  </script>"""
+
+    body_cls = "export" if for_export else "preview"
     return f"""<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8">
 <style>{css}</style></head>
-<body class="{'export' if for_export else 'preview'}">
+<body class="{body_cls}">
   <div class="card">
     {header}
     {wind_divider(PALETTE['amber'])}
     {grid}
     {bidding}
     {footer}
-  </div>
+  </div>{export_ui}
 </body></html>"""
 
 
@@ -515,84 +584,28 @@ td.nm {{ letter-spacing:{.5*s}px; }}
 /* ---------- 頁尾 ---------- */
 .ftr {{ text-align:center; padding-top:{6*s}px; }}
 .ftr span {{ font-size:{13*s}px; letter-spacing:{4*s}px; color:{p['amber']}; }}
+
+/* ---------- 匯出列（互動預覽用） ---------- */
+.xbar {{ width:{620*s}px; max-width:100%; margin:{14*s}px auto 0; text-align:center;
+  font-family:-apple-system,'Noto Sans TC','Microsoft JhengHei',sans-serif; }}
+#dlbtn {{
+  width:100%; border:none; border-radius:12px; padding:14px 16px;
+  font-size:16px; font-weight:800; letter-spacing:1px; color:#FFF4E8; cursor:pointer;
+  background:linear-gradient(120deg,{p['crimson_deep']},{p['ember']});
+  box-shadow:0 6px 16px rgba(158,42,43,.30); transition:filter .15s,transform .15s;
+}}
+#dlbtn:hover {{ filter:brightness(1.06); transform:translateY(-1px); }}
+#dlbtn:disabled {{ filter:grayscale(.4) brightness(.9); cursor:progress; }}
+.xstat {{ margin-top:8px; font-size:12.5px; line-height:1.5; color:{p['header_ink']};
+  min-height:1.2em; }}
+.ximg {{ display:block; margin:10px auto 0; max-width:300px; width:100%;
+  border:1px solid {p['hairline']}; border-radius:8px; }}
+.ximg:not([src]) {{ display:none; }}
 """
 
 
 # ---------------------------------------------------------------------------
-# PNG 匯出
-# ---------------------------------------------------------------------------
-def _find_chromium() -> str | None:
-    """在 Linux（Streamlit Cloud）與 macOS 上尋找可用的 Chromium / Chrome 執行檔。"""
-    import shutil
-
-    candidates = [
-        "chromium", "chromium-browser", "chrome", "google-chrome",
-        "google-chrome-stable",
-        "/usr/bin/chromium", "/usr/bin/chromium-browser",
-        "/usr/bin/google-chrome",
-        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-    ]
-    for c in candidates:
-        found = shutil.which(c) if "/" not in c else (c if Path(c).exists() else None)
-        if found:
-            return found
-    return None
-
-
-def render_png(data: dict) -> bytes:
-    """以 html2image 產生寬 620px、300DPI 級（3x）高解析度 PNG，並自動裁切留白。"""
-    from html2image import Html2Image
-    from PIL import Image, ImageChops
-
-    export_scale = 3  # 620 * 3 = 1860px 寬 ≈ 300DPI
-    html = build_diagram_html(data, scale=export_scale, for_export=True)
-
-    chromium = _find_chromium()
-    with tempfile.TemporaryDirectory() as tmp:
-        opts = dict(
-            output_path=tmp,
-            custom_flags=[
-                "--no-sandbox",
-                "--headless=new",
-                "--hide-scrollbars",
-                "--disable-gpu",
-                "--disable-dev-shm-usage",
-                "--default-background-color=EFE6D8",
-                "--force-device-scale-factor=1",
-            ],
-        )
-        if chromium:
-            opts["browser_executable"] = chromium
-        hti = Html2Image(**opts)
-        out_name = "diagram.png"
-        # 給足高度，之後用 Pillow 依內容裁切
-        hti.screenshot(
-            html_str=html,
-            save_as=out_name,
-            size=(620 * export_scale + 40, 4600),
-        )
-        raw = Path(tmp) / out_name
-        img = Image.open(raw).convert("RGB")
-
-    # 依外緣底色自動裁切留白
-    bg = Image.new("RGB", img.size, (239, 230, 216))
-    diff = ImageChops.difference(img, bg)
-    bbox = diff.getbbox()
-    if bbox:
-        pad = 6 * export_scale
-        left = max(bbox[0] - pad, 0)
-        top = max(bbox[1] - pad, 0)
-        right = min(bbox[2] + pad, img.width)
-        bottom = min(bbox[3] + pad, img.height)
-        img = img.crop((left, top, right, bottom))
-
-    buf = io.BytesIO()
-    img.save(buf, format="PNG", dpi=(300, 300), optimize=True)
-    return buf.getvalue()
-
-
-# ---------------------------------------------------------------------------
-# 雲端硬碟收集（Google Apps Script Web App）
+# 雲端硬碟收集（Google Apps Script Web App）— 上傳改在瀏覽器端做，這裡只取設定值
 # ---------------------------------------------------------------------------
 def _secret(name: str, default: str = "") -> str:
     try:
@@ -607,34 +620,6 @@ def _secret(name: str, default: str = "") -> str:
 
 def drive_enabled() -> bool:
     return bool(_secret("drive_webhook_url"))
-
-
-def upload_to_drive(png: bytes, filename: str, description: str = "") -> tuple[bool, str]:
-    """把 PNG 交給 lyf1228@gmail.com 部署的 Apps Script，寫入其雲端硬碟資料夾。"""
-    url = _secret("drive_webhook_url")
-    if not url:
-        return False, "尚未設定 drive_webhook_url"
-    import requests
-
-    try:
-        resp = requests.post(
-            url,
-            json={
-                "filename": filename,
-                "mimeType": "image/png",
-                "data": base64.b64encode(png).decode("ascii"),
-                "secret": _secret("drive_webhook_secret"),
-                "description": description,
-            },
-            timeout=45,
-        )
-        resp.raise_for_status()
-        payload = resp.json()
-    except Exception as exc:  # noqa: BLE001
-        return False, f"連線失敗：{exc}"
-    if payload.get("ok"):
-        return True, payload.get("url", "")
-    return False, str(payload.get("error", "未知錯誤"))
 
 
 # ---------------------------------------------------------------------------
@@ -862,60 +847,34 @@ data = {
     "notes": notes,
 }
 
-# ======================= 右：即時預覽 + 匯出 =======================
+# ======================= 右：即時預覽 + 下載（瀏覽器端產圖） =======================
 with preview_col:
-    st.markdown("### 🍁 即時預覽")
-    preview_html = build_diagram_html(data, scale=1.0, for_export=False)
+    st.markdown("### 🍁 即時預覽 · 下載")
+    meta = " · ".join(
+        x for x in [
+            data.get("title", ""), data.get("session", ""),
+            (f'第 {data["board"]} 副' if data.get("board") else ""),
+            (data.get("room") or ""),
+        ] if x
+    )
+    preview_html = build_diagram_html(
+        data, scale=1.0, interactive=True,
+        webhook=_secret("drive_webhook_url"),
+        secret=_secret("drive_webhook_secret"),
+        meta=meta,
+    )
     n_rows = len(parse_bidding(data["bidding"], data["first_seat"]))
     n_notes = len([x for x in (notes or "").splitlines() if x.strip()])
-    height = 470 + 34 * n_rows + 22 * n_notes + 90
+    height = 640 + 44 * n_rows + 28 * n_notes + 320
     st.markdown('<div class="preview-wrap">', unsafe_allow_html=True)
     st.components.v1.html(preview_html, height=height, scrolling=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
-    st.markdown("#### 匯出")
-    st.caption("寬 620px、300DPI 級（3×）高解析度照片，自動裁切留白。")
-    if drive_enabled():
-        st.caption("☁️ 產出後除了可下載，也會自動存入「金牌橋藝教室」的雲端硬碟收藏。")
-    if st.button("📸 匯出牌局叫牌圖", use_container_width=True):
-        with st.spinner("正在以楓葉油墨印製…"):
-            try:
-                png = render_png(data)
-                st.session_state["png"] = png
-                st.session_state["png_name"] = (
-                    f"Bridge_Diagram_{datetime.now():%Y%m%d_%H%M%S}.png"
-                )
-                st.session_state.pop("drive_msg", None)
-            except Exception as exc:  # noqa: BLE001
-                st.error(f"匯出失敗：{exc}")
-                st.info("若在雲端，請確認 packages.txt 已安裝 chromium，並 Reboot app 一次。")
-
-        if st.session_state.get("png") and drive_enabled():
-            with st.spinner("同步到雲端硬碟收藏…"):
-                meta = " · ".join(
-                    x for x in [
-                        data.get("title", ""), data.get("session", ""),
-                        (f'第 {data["board"]} 副' if data.get("board") else ""),
-                        (data.get("room") or ""),
-                    ] if x
-                )
-                ok, info = upload_to_drive(png, st.session_state["png_name"], meta)
-            st.session_state["drive_msg"] = ("ok" if ok else "err", info)
-
-    if st.session_state.get("png"):
-        st.download_button(
-            "⬇️ 下載 " + st.session_state["png_name"],
-            data=st.session_state["png"],
-            file_name=st.session_state["png_name"],
-            mime="image/png",
-            use_container_width=True,
-        )
-        dm = st.session_state.get("drive_msg")
-        if dm and dm[0] == "ok":
-            st.success("☁️ 已存入雲端硬碟收藏。" + (f"　[開啟]({dm[1]})" if dm[1] else ""))
-        elif dm and dm[0] == "err":
-            st.warning(f"雲端硬碟同步未成功（下載不受影響）：{dm[1]}")
-        st.image(st.session_state["png"], caption="最終產出（已下載檔）", use_container_width=True)
+    st.caption(
+        "圖在你的瀏覽器直接產生（pixelRatio 3 ≈ 300DPI 級），不需伺服器。"
+        + ("　☁️ 每張圖也會自動送進「金牌橋藝教室」的雲端硬碟收藏。" if drive_enabled()
+           else "　（未設定雲端收集，只會下載到你的裝置。）")
+    )
 
 st.divider()
 st.caption("🍁 金牌橋藝教室🍁")
