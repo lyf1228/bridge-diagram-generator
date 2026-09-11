@@ -260,7 +260,6 @@ def build_diagram_html(
         f'    <div class="cc-hub">{data["board"] or "&nbsp;"}</div>'
         f'    {compass_cell("E")}</div>'
         f'  <div class="cc-row cc-bot">{compass_cell("S")}</div>'
-        f'  <div class="cc-vlabel">{data["vuln_label"]}</div>'
         '</div>'
     )
 
@@ -536,11 +535,6 @@ body.export {{ background:{p['outer']}; }}
   font-size:{18*s}px; font-weight:800; color:{p['header_ink']};
   width:{28*s}px; height:{25*s}px; display:flex; align-items:center;
   justify-content:center; border-radius:{6*s}px;
-}}
-.cc-vlabel {{
-  position:absolute; bottom:{5*s}px; left:0; right:0; text-align:center;
-  font-size:{11*s}px; font-weight:700; letter-spacing:{1.5*s}px;
-  color:{p['header_ink']}; opacity:.7;
 }}
 .cc-dealer {{ box-shadow:0 0 0 {1.5*s}px {p['header_ink']}; }}
 .cc-vuln {{
