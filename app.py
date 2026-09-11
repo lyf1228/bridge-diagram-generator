@@ -247,7 +247,6 @@ def build_diagram_html(
     )
 
     # 叫牌表 ---------------------------------------------------------------
-    rot = SEATS[SEATS.index(data["first_seat"]):] + SEATS[:SEATS.index(data["first_seat"])]
     head_cols = "".join(
         f'<th>{SEAT_LABEL[s].split()[0]}<span class="th-en">{SEAT_LABEL[s].split()[1]}</span></th>'
         for s in SEATS
@@ -734,7 +733,7 @@ with st.expander("📖 輸入說明 · 快速對照鍵（第一次使用請先�
 | **② 四家手牌** | 每家 ♠♥♦♣ 各一格，直接打點數如 `AKQ` 或 `A K Q`；`10` 自動轉 `T`；**缺門打 `--`** |
 | **③ 叫牌區** | 室別標題、四席選手姓名、叫牌序列（**每行一輪**、空白分隔、`P`=Pass `X`=Dbl `XX`=Rdbl）、叫牌註解 |
 
-先在「**開叫席位**」選第一個叫牌的人，系統會自動把叫品對齊正確欄位。改好任一欄位，右側預覽即時更新 → 按「📸 匯出」下載 PNG。
+叫牌永遠從「**發牌者**」開始，系統會自動把叫品對齊正確欄位。改好任一欄位，右側預覽即時更新 → 按「📸 匯出」下載 PNG。
 """
     )
 
@@ -746,7 +745,6 @@ EXAMPLE = {
     "f_dealer": "N",
     "f_vuln": "南北 (N-S)",
     "f_room": "公開室 Open Room",
-    "f_first": "N",
     "nm_W": "", "nm_N": "王小明", "nm_E": "", "nm_S": "李大華",
     "f_bidding": "1NT  P  3NT  P\nP  P",
     "f_notes": "1NT：15–17 大牌點，平均牌型\n3NT：北家有把握的一擊到位",
@@ -758,7 +756,6 @@ for _seat, _holds in DEFAULT_HANDS.items():
 # 選擇鈕仍需一個預設選項（不是空白文字框，不影響「可修改」的辨識度）
 st.session_state.setdefault("f_dealer", "N")
 st.session_state.setdefault("f_vuln", "南北 (N-S)")
-st.session_state.setdefault("f_first", "N")
 
 form_col, preview_col = st.columns([1, 1], gap="large")
 
@@ -771,8 +768,7 @@ with form_col:
         st.rerun()
     if eb2.button("🧹 全部清空", use_container_width=True):
         for _key in EXAMPLE:
-            if not _key.startswith("f_dealer") and not _key.startswith("f_vuln") \
-                    and not _key.startswith("f_first"):
+            if not _key.startswith("f_dealer") and not _key.startswith("f_vuln"):
                 st.session_state[_key] = ""
         st.rerun()
     st.caption("👇 下面每一格都可以點進去輸入 / 修改；空白處的淺灰字只是範例提示。")
@@ -810,8 +806,7 @@ with form_col:
     # ---- ③ 叫牌區 ----
     st.markdown("### ③ 叫牌區")
     room = st.text_input("室別標題", key="f_room", placeholder="例：公開室 Open Room")
-    first_seat = st.radio("開叫席位（第一個叫牌的人）", SEATS, key="f_first",
-                          horizontal=True, format_func=lambda x: SEAT_ZH[x])
+    st.caption(f"開叫席位跟著發牌者：{SEAT_ZH[dealer]}（{dealer}）先叫")
     st.caption("選手席位姓名")
     n1, n2 = st.columns(2)
     names = {}
@@ -841,7 +836,7 @@ data = {
     "vuln_seats": VULN_OPTIONS[vuln_label],
     "hands": hands,
     "room": room,
-    "first_seat": first_seat,
+    "first_seat": dealer,  # 叫牌永遠從發牌者開始
     "names": names,
     "bidding": bidding,
     "notes": notes,
