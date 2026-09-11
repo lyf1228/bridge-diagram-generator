@@ -117,6 +117,35 @@ VULN_OPTIONS = {
     "雙方 (Both)": {"N", "S", "E", "W"},
 }
 
+# ---------------------------------------------------------------------------
+# 牌號 → 發牌者 / 身價（標準複式橋牌 16 副循環表）
+# ---------------------------------------------------------------------------
+VULN_KEY_TO_LABEL = {
+    "none": "雙無 (None)",
+    "ns": "南北 (N-S)",
+    "ew": "東西 (E-W)",
+    "both": "雙方 (Both)",
+}
+# 第 1~16 副的標準身價循環；超過 16 副（17, 18, …）依 1~16 重新循環
+_VULN_CYCLE_16 = [
+    "none", "ns", "ew", "both", "ns", "ew", "both", "none",
+    "ew", "both", "none", "ns", "both", "none", "ns", "ew",
+]
+_DEALER_CYCLE_4 = ["N", "E", "S", "W"]
+
+
+def board_to_dealer(board_num: int) -> str:
+    return _DEALER_CYCLE_4[(board_num - 1) % 4]
+
+
+def board_to_vuln_key(board_num: int) -> str:
+    return _VULN_CYCLE_16[(board_num - 1) % 16]
+
+
+def parse_board_number(raw: str) -> int | None:
+    raw = (raw or "").strip()
+    return int(raw) if raw.isdigit() and int(raw) > 0 else None
+
 
 def clean_holding(raw: str) -> str:
     """整理單一花色字串；-- 或空 => 缺門。"""
@@ -251,36 +280,47 @@ def build_diagram_html(
         f'<th>{SEAT_LABEL[s].split()[0]}<span class="th-en">{SEAT_LABEL[s].split()[1]}</span></th>'
         for s in SEATS
     )
-    names = data["names"]
-    name_row = "".join(f'<td class="nm">{(names.get(s) or "").strip() or "—"}</td>' for s in SEATS)
-    body_rows = ""
-    for i, row in enumerate(parse_bidding(data["bidding"], data["first_seat"])):
-        zc = "zebra" if i % 2 else ""
-        body_rows += f'<tr class="{zc}">' + "".join(f"<td>{c or ''}</td>" for c in row) + "</tr>"
 
-    note_block = ""
-    if (data.get("notes") or "").strip():
-        note_lines = "".join(
-            f"<li>{ln.strip()}</li>" for ln in data["notes"].splitlines() if ln.strip()
+    def bidding_section(room_val: str, names_d: dict, bidding_text: str, notes_text: str) -> str:
+        name_row = "".join(
+            f'<td class="nm">{(names_d.get(s) or "").strip() or "—"}</td>' for s in SEATS
         )
-        note_block = f'<div class="notes"><div class="notes-h">叫牌註解</div><ul>{note_lines}</ul></div>'
+        body_rows = ""
+        for i, row in enumerate(parse_bidding(bidding_text, data["first_seat"])):
+            zc = "zebra" if i % 2 else ""
+            body_rows += (
+                f'<tr class="{zc}">' + "".join(f"<td>{c or ''}</td>" for c in row) + "</tr>"
+            )
+        note_block = ""
+        if (notes_text or "").strip():
+            note_lines = "".join(
+                f"<li>{ln.strip()}</li>" for ln in notes_text.splitlines() if ln.strip()
+            )
+            note_block = (
+                f'<div class="notes"><div class="notes-h">叫牌註解</div><ul>{note_lines}</ul></div>'
+            )
+        room_line = ""
+        if (room_val or "").strip():
+            room_line = f'<div class="room">{room_val.strip()}</div>'
+        return (
+            '<div class="bidsec">'
+            f'  <div class="bidsec-h"><span class="bh-leaf">{maple_svg(p["crimson"], 1)}</span>'
+            f'     叫牌記錄 · Bidding {room_line}</div>'
+            f'  <table class="bidtable">'
+            f'     <thead><tr>{head_cols}</tr>'
+            f'     <tr class="names">{name_row}</tr></thead>'
+            f'     <tbody>{body_rows}</tbody>'
+            f'  </table>'
+            f'  {note_block}'
+            '</div>'
+        )
 
-    room_line = ""
-    if (data.get("room") or "").strip():
-        room_line = f'<div class="room">{data["room"].strip()}</div>'
-
-    bidding = (
-        '<div class="bidsec">'
-        f'  <div class="bidsec-h"><span class="bh-leaf">{maple_svg(p["crimson"], 1)}</span>'
-        f'     叫牌記錄 · Bidding {room_line}</div>'
-        f'  <table class="bidtable">'
-        f'     <thead><tr>{head_cols}</tr>'
-        f'     <tr class="names">{name_row}</tr></thead>'
-        f'     <tbody>{body_rows}</tbody>'
-        f'  </table>'
-        f'  {note_block}'
-        '</div>'
-    )
+    bidding = bidding_section(data.get("room", ""), data["names"], data["bidding"], data["notes"])
+    if data.get("room2_enabled") and data.get("room2"):
+        r2 = data["room2"]
+        bidding += bidding_section(
+            r2.get("room", ""), r2.get("names", {}), r2.get("bidding", ""), r2.get("notes", "")
+        )
 
     # 頁首 ---------------------------------------------------------------
     subtitle_bits = []
@@ -729,9 +769,9 @@ with st.expander("📖 輸入說明 · 快速對照鍵（第一次使用請先�
         """
 | 區塊 | 怎麼填 |
 | --- | --- |
-| **① 基本資訊** | 賽事名稱、副數與發牌、發牌者、身價（雙無 / 南北 / 東西 / 雙方） |
+| **① 基本資訊** | 賽事名稱、副數與發牌、發牌編號。**勾選「依牌號自動帶入」後不用選發牌者／身價**——標準複式橋牌 16 副循環表會自動算好，超過 16 副會自動重新循環（17=1、18=2…） |
 | **② 四家手牌** | 每家 ♠♥♦♣ 各一格，直接打點數如 `AKQ` 或 `A K Q`；`10` 自動轉 `T`；**缺門打 `--`** |
-| **③ 叫牌區** | 室別標題、四席選手姓名、叫牌序列（**每行一輪**、空白分隔、`P`=Pass `X`=Dbl `XX`=Rdbl）、叫牌註解 |
+| **③ 叫牌區** | 室別標題、四席選手姓名、叫牌序列（**每行一輪**、空白分隔、`P`=Pass `X`=Dbl `XX`=Rdbl）、叫牌註解；可勾選「顯示第二段叫牌記錄」再加一份（例如公開室 / 關閉室對照） |
 
 叫牌永遠從「**發牌者**」開始，系統會自動把叫品對齊正確欄位。改好任一欄位，右側預覽即時更新 → 按「📸 匯出」下載 PNG。
 """
@@ -748,6 +788,9 @@ EXAMPLE = {
     "nm_W": "", "nm_N": "王小明", "nm_E": "", "nm_S": "李大華",
     "f_bidding": "1NT  P  3NT  P\nP  P",
     "f_notes": "1NT：15–17 大牌點，平均牌型\n3NT：北家有把握的一擊到位",
+    # 第二段叫牌記錄預設留空（載入範例 / 全部清空都會把它歸零，不影響顯示與否的勾選）
+    "f_room2": "", "nm2_W": "", "nm2_N": "", "nm2_E": "", "nm2_S": "",
+    "f_bidding2": "", "f_notes2": "",
 }
 for _seat, _holds in DEFAULT_HANDS.items():
     for _k, _v in _holds.items():
@@ -756,6 +799,8 @@ for _seat, _holds in DEFAULT_HANDS.items():
 # 選擇鈕仍需一個預設選項（不是空白文字框，不影響「可修改」的辨識度）
 st.session_state.setdefault("f_dealer", "N")
 st.session_state.setdefault("f_vuln", "南北 (N-S)")
+st.session_state.setdefault("f_auto_dv", True)
+st.session_state.setdefault("f_show_room2", False)
 
 form_col, preview_col = st.columns([1, 1], gap="large")
 
@@ -778,16 +823,40 @@ with form_col:
     title = st.text_input("賽事名稱", key="f_title",
                           placeholder="例：2026 中華橋協秋季公開賽")
     session = st.text_input("副數與發牌", key="f_session", placeholder="例：第 3 循環")
-    b1, b2 = st.columns([1, 2])
-    with b1:
-        board = st.text_input("發牌編號", key="f_board", placeholder="例：18")
-    with b2:
-        dealer = st.radio("發牌者 (Dealer)", SEATS, key="f_dealer", horizontal=True,
-                          format_func=lambda x: SEAT_ZH[x])
-    vuln_label = st.radio(
-        "身價 (Vulnerability)", list(VULN_OPTIONS.keys()), key="f_vuln", horizontal=True,
-        format_func=lambda x: x.split(" (")[0],
+    board = st.text_input("發牌編號", key="f_board", placeholder="例：18")
+
+    auto_dv = st.checkbox(
+        "🔢 依牌號自動帶入發牌者與身價（標準 16 副循環）",
+        key="f_auto_dv",
     )
+    board_num = parse_board_number(board)
+
+    if auto_dv and board_num:
+        dealer = board_to_dealer(board_num)
+        vuln_key = board_to_vuln_key(board_num)
+        vuln_label = VULN_KEY_TO_LABEL[vuln_key]
+        # 同步存回 session_state，若之後取消勾選改手動，選項會接續這個值
+        st.session_state["f_dealer"] = dealer
+        st.session_state["f_vuln"] = vuln_label
+        wrap_note = (
+            f"　（= 第 {((board_num - 1) % 16) + 1} 副的標準循環）" if board_num > 16 else ""
+        )
+        st.caption(
+            f"✅ 第 {board_num} 副　→　發牌者 **{SEAT_ZH[dealer]}（{dealer}）**　·　"
+            f"身價 **{vuln_label.split(' (')[0]}**{wrap_note}"
+        )
+    else:
+        if auto_dv:
+            st.caption("尚未輸入有效牌號，請先輸入發牌編號，或取消勾選改手動選擇。")
+        d1, d2 = st.columns(2)
+        with d1:
+            dealer = st.radio("發牌者 (Dealer)", SEATS, key="f_dealer", horizontal=True,
+                              format_func=lambda x: SEAT_ZH[x])
+        with d2:
+            vuln_label = st.radio(
+                "身價 (Vulnerability)", list(VULN_OPTIONS.keys()), key="f_vuln", horizontal=True,
+                format_func=lambda x: x.split(" (")[0],
+            )
 
     # ---- ② 四家手牌 ----
     st.markdown("### ② 四家手牌　·　缺門請輸入 `--`")
@@ -827,6 +896,34 @@ with form_col:
         placeholder="1NT：15–17 大牌點，平均牌型\n3NT：北家有把握的一擊到位",
     )
 
+    show_room2 = st.checkbox(
+        "➕ 顯示第二段叫牌記錄（例如公開室 / 關閉室各一份）",
+        key="f_show_room2",
+    )
+    room2 = None
+    if show_room2:
+        st.markdown("**第二段叫牌記錄**")
+        room_b = st.text_input("室別標題２", key="f_room2", placeholder="例：關閉室 Closed Room")
+        st.caption("選手席位姓名２")
+        n1b, n2b = st.columns(2)
+        names_b = {}
+        with n1b:
+            names_b["W"] = st.text_input("西 選手２", key="nm2_W", placeholder="選填")
+            names_b["N"] = st.text_input("北 選手２", key="nm2_N", placeholder="選填")
+        with n2b:
+            names_b["E"] = st.text_input("東 選手２", key="nm2_E", placeholder="選填")
+            names_b["S"] = st.text_input("南 選手２", key="nm2_S", placeholder="選填")
+        bidding_b = st.text_area(
+            "多行文字叫牌序列２（同一副牌，第二段各自的叫牌）",
+            key="f_bidding2", height=120,
+            placeholder="P  P  1S  P\n2H  P  4H  P\nP  P",
+        )
+        notes_b = st.text_area(
+            "叫牌註解備註２（每行一則）",
+            key="f_notes2", height=90,
+        )
+        room2 = {"room": room_b, "names": names_b, "bidding": bidding_b, "notes": notes_b}
+
 data = {
     "title": title,
     "session": session,
@@ -840,6 +937,8 @@ data = {
     "names": names,
     "bidding": bidding,
     "notes": notes,
+    "room2_enabled": show_room2,
+    "room2": room2,
 }
 
 # ======================= 右：即時預覽 + 下載（瀏覽器端產圖） =======================
@@ -860,7 +959,10 @@ with preview_col:
     )
     n_rows = len(parse_bidding(data["bidding"], data["first_seat"]))
     n_notes = len([x for x in (notes or "").splitlines() if x.strip()])
-    height = 640 + 44 * n_rows + 28 * n_notes + 320
+    if data["room2_enabled"] and data["room2"]:
+        n_rows += len(parse_bidding(data["room2"]["bidding"], data["first_seat"]))
+        n_notes += len([x for x in data["room2"]["notes"].splitlines() if x.strip()])
+    height = 640 + 44 * n_rows + 28 * n_notes + 320 + (140 if data["room2_enabled"] else 0)
     st.markdown('<div class="preview-wrap">', unsafe_allow_html=True)
     st.components.v1.html(preview_html, height=height, scrolling=True)
     st.markdown("</div>", unsafe_allow_html=True)
