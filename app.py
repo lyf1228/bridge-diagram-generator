@@ -161,6 +161,57 @@ def clean_holding(raw: str) -> str:
     return " ".join(cards)
 
 
+_RANK_CHARS = "AKQJT98765432"
+_VOID_TOKENS = {"", "-", "--", "—", "VOID"}
+
+
+def _parse_holding_strict(raw: str) -> tuple[list[str], list[str]]:
+    """回傳 (有效點數字元, 無法辨識的字元)；不處理排序、不去重複。"""
+    raw = (raw or "").strip()
+    if raw.upper() in _VOID_TOKENS:
+        return [], []
+    raw = raw.upper().replace("10", "T")
+    valid, invalid = [], []
+    for ch in raw:
+        if ch in _RANK_CHARS:
+            valid.append(ch)
+        elif ch in " ,\t":
+            continue
+        else:
+            invalid.append(ch)
+    return valid, invalid
+
+
+def validate_hands(hands: dict) -> list[str]:
+    """檢查兩件事：花色輸入含無法辨識字元、同一張牌被輸入超過一次。"""
+    errors: list[str] = []
+    occurrences: dict[tuple[str, str], list[str]] = {}
+    for seat in SEATS:
+        for suit_key, suit_sym in SUITS:
+            raw = (hands.get(seat, {}) or {}).get(suit_key, "")
+            valid_chars, invalid_chars = _parse_holding_strict(raw)
+            if invalid_chars:
+                bad = "".join(sorted(set(invalid_chars)))
+                errors.append(
+                    f"{SEAT_ZH[seat]}家 {suit_sym} 輸入「{raw}」含無法辨識的字元「{bad}」，請修正"
+                )
+            for rank in valid_chars:
+                occurrences.setdefault((suit_key, rank), []).append(seat)
+
+    for (suit_key, rank), seats in occurrences.items():
+        if len(seats) <= 1:
+            continue
+        suit_sym = dict(SUITS)[suit_key]
+        if len(set(seats)) == 1:
+            errors.append(
+                f"{SEAT_ZH[seats[0]]}家 {suit_sym} 的 {rank} 重複輸入了 {len(seats)} 次"
+            )
+        else:
+            names = "、".join(f"{SEAT_ZH[s]}家" for s in seats)
+            errors.append(f"{suit_sym} {rank} 同時出現在 {names}，同一張牌只能屬於一家")
+    return errors
+
+
 def hand_html(hand: dict) -> str:
     rows = []
     for key, _sym in SUITS:
@@ -236,6 +287,7 @@ def build_diagram_html(
     webhook: str = "",
     secret: str = "",
     meta: str = "",
+    errors: list[str] | None = None,
 ) -> str:
     p = PALETTE
     vuln = data["vuln_seats"]
@@ -352,7 +404,16 @@ def build_diagram_html(
     css = _diagram_css(scale)
 
     export_ui = ""
-    if interactive:
+    if interactive and errors:
+        err_items = "".join(f"<li>{e}</li>" for e in errors)
+        export_ui = f"""
+  <div class="xbar">
+    <div class="xerr">
+      <div class="xerr-h">⚠️ 請先修正牌局才能匯出</div>
+      <ul>{err_items}</ul>
+    </div>
+  </div>"""
+    elif interactive:
         cfg = json.dumps(
             {"webhook": webhook or "", "secret": secret or "", "meta": meta or "",
              "prefix": "Bridge_Diagram_"}
@@ -634,6 +695,14 @@ td.nm {{ letter-spacing:{.5*s}px; }}
 .ximg {{ display:block; margin:10px auto 0; max-width:300px; width:100%;
   border:1px solid {p['hairline']}; border-radius:8px; }}
 .ximg:not([src]) {{ display:none; }}
+.xerr {{
+  text-align:left; background:#FDEDEC;
+  border:1.5px solid {p['suit_red']}; border-radius:12px;
+  padding:12px 16px; font-family:-apple-system,'Noto Sans TC','Microsoft JhengHei',sans-serif;
+}}
+.xerr-h {{ font-weight:800; color:{p['suit_red']}; margin-bottom:6px; font-size:14px; }}
+.xerr ul {{ margin:0; padding-left:18px; }}
+.xerr li {{ font-size:12.5px; line-height:1.7; color:{p['header_ink']}; }}
 """
 
 
@@ -866,6 +935,13 @@ with form_col:
                     placeholder=DEFAULT_HANDS[seat][key].replace(" ", ""),
                 )
 
+    hand_errors = validate_hands(hands)
+    if hand_errors:
+        st.error(
+            "⚠️ 牌局有誤，請修正後才能匯出：\n\n"
+            + "\n".join(f"- {e}" for e in hand_errors)
+        )
+
     # ---- ③ 叫牌區 ----
     st.markdown("### ③ 叫牌區")
     room = st.text_input("室別標題", key="f_room", placeholder="例：公開室 Open Room")
@@ -950,6 +1026,7 @@ with preview_col:
         webhook=_secret("drive_webhook_url"),
         secret=_secret("drive_webhook_secret"),
         meta=meta,
+        errors=hand_errors,
     )
     n_rows = len(parse_bidding(data["bidding"], data["first_seat"]))
     n_notes = len([x for x in (notes or "").splitlines() if x.strip()])
@@ -957,6 +1034,8 @@ with preview_col:
         n_rows += len(parse_bidding(data["room2"]["bidding"], data["first_seat"]))
         n_notes += len([x for x in data["room2"]["notes"].splitlines() if x.strip()])
     height = 640 + 44 * n_rows + 28 * n_notes + 320 + (140 if data["room2_enabled"] else 0)
+    if hand_errors:
+        height += 40 + 24 * len(hand_errors)
     st.markdown('<div class="preview-wrap">', unsafe_allow_html=True)
     st.components.v1.html(preview_html, height=height, scrolling=True)
     st.markdown("</div>", unsafe_allow_html=True)
