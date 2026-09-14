@@ -9,15 +9,18 @@
 
 ## 功能
 
-- **① 基本資訊**：賽事名稱、副數與發牌、發牌編號、發牌者、身價（雙無 / 南北 / 東西 / 雙方）。
+- **① 基本資訊**：賽事名稱、場次、發牌編號。勾選「依牌號自動帶入」後，發牌者與身價
+  依標準複式橋牌 16 副循環表自動算好（超過 16 副自動重新循環：17=1、18=2…），
+  取消勾選則可手動選擇。
 - **② 四家手牌**：每家 ♠ ♥ ♦ ♣ 逐門輸入，`10` 自動轉 `T`，`--` 代表缺門，自動由大到小排序。
-- **③ 叫牌區**：室別標題、開叫席位、四席選手姓名、多行叫牌序列
-  （每行一輪、空白分隔、`P`=Pass、`X`=Dbl、`XX`=Rdbl）、叫牌註解。
+- **③ 叫牌區**：室別標題、四席選手姓名、多行叫牌序列
+  （每行一輪、空白分隔、`P`=Pass、`X`=Dbl、`XX`=Rdbl，永遠從發牌者開始）、叫牌註解；
+  可另外勾選「顯示第二段叫牌記錄」加一份（例如公開室／關閉室對照）。
 - **好上手**：欄位預設留空並顯示淺灰範例提示；「🎴 載入範例牌局」一鍵帶入示範資料，
   「🧹 全部清空」一鍵清除。
 - **即時預覽**：右側同步呈現卡片，改任一欄位立即更新。
-- **一鍵匯出**：`html2image` 產生寬 620px、300DPI 級（3×）高解析度 PNG，
-  自動裁切留白，檔名 `Bridge_Diagram_{timestamp}.png`。
+- **一鍵匯出**：瀏覽器端用 `html-to-image` 直接產生寬 620px、3×（≈300DPI 級）PNG，
+  不需伺服器端 headless 瀏覽器，檔名 `Bridge_Diagram_{timestamp}.png`。
 - **選用雲端收集**：設定後每張匯出圖也會自動存進指定 Google 雲端硬碟（見下方）。
 
 ## 版面與字體
@@ -43,13 +46,13 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-匯出 PNG 需要本機安裝 Chrome / Chromium（`html2image` 依賴）。
+PNG 匯出在瀏覽器端進行，本機執行不需要另外安裝 Chrome / Chromium。
 
 ## 部署到 Streamlit Community Cloud（免費）
 
 1. 將本倉庫推送到 GitHub。
 2. <https://share.streamlit.io> → **New app** → 選此倉庫、分支與 `app.py`。
-3. `requirements.txt` 安裝 Python 套件；`packages.txt` 安裝 `chromium` 供 `html2image` 匯出。
+3. `requirements.txt` 安裝 Python 套件（只有 `streamlit`）。
 4. Deploy，取得公開、免登入的網址。
 
 ## 選用：把每張匯出圖收集到雲端硬碟
@@ -76,8 +79,8 @@ streamlit run app.py
 
 | 檔案 | 用途 |
 | --- | --- |
-| `app.py` | Streamlit 單檔應用（介面、卡片 HTML/CSS、PNG 匯出、雲端上傳） |
-| `requirements.txt` / `packages.txt` | Python 套件 / 系統套件（chromium） |
+| `app.py` | Streamlit 單檔應用（介面、卡片 HTML/CSS、瀏覽器端 PNG 匯出、雲端上傳） |
+| `requirements.txt` | Python 套件（僅 `streamlit`） |
 | `drive_collector.gs` | Google Apps Script：接收 PNG 並寫入雲端硬碟 |
 | `.streamlit/config.toml` | 主題設定 |
 | `.streamlit/secrets.toml.example` | 雲端硬碟密鑰範本 |
