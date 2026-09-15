@@ -183,9 +183,11 @@ def _parse_holding_strict(raw: str) -> tuple[list[str], list[str]]:
 
 
 def validate_hands(hands: dict) -> list[str]:
-    """檢查兩件事：花色輸入含無法辨識字元、同一張牌被輸入超過一次。"""
+    """檢查三件事：花色輸入含無法辨識字元、同一張牌被輸入超過一次、
+    單一家總張數超過 13 張。"""
     errors: list[str] = []
     occurrences: dict[tuple[str, str], list[str]] = {}
+    seat_totals: dict[str, int] = {seat: 0 for seat in SEATS}
     for seat in SEATS:
         for suit_key, suit_sym in SUITS:
             raw = (hands.get(seat, {}) or {}).get(suit_key, "")
@@ -195,6 +197,7 @@ def validate_hands(hands: dict) -> list[str]:
                 errors.append(
                     f"{SEAT_ZH[seat]}家 {suit_sym} 輸入「{raw}」含無法辨識的字元「{bad}」，請修正"
                 )
+            seat_totals[seat] += len(valid_chars)
             for rank in valid_chars:
                 occurrences.setdefault((suit_key, rank), []).append(seat)
 
@@ -209,6 +212,12 @@ def validate_hands(hands: dict) -> list[str]:
         else:
             names = "、".join(f"{SEAT_ZH[s]}家" for s in seats)
             errors.append(f"{suit_sym} {rank} 同時出現在 {names}，同一張牌只能屬於一家")
+
+    for seat, total in seat_totals.items():
+        if total > 13:
+            errors.append(
+                f"{SEAT_ZH[seat]}家 目前共 {total} 張牌，超過 13 張上限，請刪掉多的牌"
+            )
     return errors
 
 
