@@ -1220,7 +1220,7 @@ UI_CSS = f"""
     radial-gradient(900px 480px at 108% 4%, #F3D7C2 0%, rgba(243,215,194,0) 55%),
     linear-gradient(180deg, {PALETTE['parchment']} 0%, {PALETTE['outer']} 100%);
 }}
-.block-container {{ padding-top:1.4rem; max-width:1400px; }}
+.block-container {{ padding-top:5.5rem; max-width:1400px; }}
 
 /* 語言切換列 */
 .st-key-langbar {{ margin-bottom:.6rem; }}
