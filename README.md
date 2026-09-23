@@ -3,6 +3,9 @@
 開放給大眾使用、免登入、即時預覽、一鍵下載出版級 PNG 的橋牌牌局與叫牌自動生成系統。
 介面與產出卡片以秋楓、羊皮紙為視覺語彙，追求出版級編排質感。
 
+**多語言**：繁體中文、简体中文、English、Italiano、Français，頁面上方按鈕即可切換，
+輸入介面、驗證訊息、匯出卡片皆同步翻譯（單一 App，無需分開部署）。
+
 線上版：<https://bridge-diagram-generator.streamlit.app/>
 
 ![preview](docs/preview.png)
